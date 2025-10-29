@@ -16,6 +16,7 @@ type ExtractedInfoProps = {
 
 export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
   const [insurer, setInsurer] = useState(data.insurer);
+  const [customInsurer, setCustomInsurer] = useState('');
   const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
   const [denialReason, setDenialReason] = useState(data.denialReason);
 
@@ -33,7 +34,7 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
 
   const handleSave = () => {
     onSave({
-      insurer,
+      insurer: insurer === 'Other' ? customInsurer : insurer,
       policyNumber,
       denialReason
     });
@@ -85,8 +86,8 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
                   Custom Insurance Company Name
                 </label>
                 <Input
-                  value={insurer}
-                  onChange={(e) => setInsurer(e.target.value)}
+                  value={customInsurer}
+                  onChange={(e) => setCustomInsurer(e.target.value)}
                   placeholder="Enter insurance company name"
                   className="w-full"
                 />
@@ -139,7 +140,7 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!insurer || !policyNumber || !denialReason}
+            disabled={!insurer || (insurer === 'Other' && !customInsurer) || !policyNumber || !denialReason}
             size="lg"
             className="px-8"
           >

@@ -103,13 +103,20 @@ export function AppealStrategy({ parsedData, onDraftEmail, onBack }: AppealStrat
       subject: `Appeal for Claim Denial - Policy #${parsedData.policyNumber}`,
       body: `Dear ${parsedData.insurer} Claims Department,
 
-I am writing to formally appeal the denial of my recent claim (Policy #${parsedData.policyNumber}).
+I am writing to formally appeal the denial of my recent claim under Policy #${parsedData.policyNumber}.
 
-Your denial states that the service was "${parsedData.denialReason.toLowerCase()}." However, this determination appears to conflict with the coverage provisions outlined in my policy.
+According to your denial notice, the claim was denied on the basis that the service was "${parsedData.denialReason.toLowerCase()}." Upon review, this determination appears inconsistent with the terms and coverage provisions outlined in my policy.
 
-Specifically, Section 4.B of my policy document states: "Medically necessary services include those procedures that are appropriate and consistent with the diagnosis."
+Specifically, Section 4.B of the policy states: "Medically necessary services include those procedures that are appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or the quality of care provided."
 
-I request that you reconsider your denial based on these policy provisions.
+My treating physician has confirmed that this service was medically necessary, appropriate for my diagnosis, and consistent with accepted standards of medical care. The procedure was performed based on sound clinical judgment and was essential for effective treatment and recovery.
+
+Accordingly, I respectfully request that you:
+1. Review the enclosed medical documentation and physician statement,
+2. Reconsider the claim in light of the policy language cited above, and
+3. Provide a written explanation if the denial is upheld, including the specific basis for your determination.
+
+Please confirm receipt of this appeal and advise if any additional information is needed to facilitate review. I look forward to your response within the timeframe specified in my policy’s appeal procedures.
 
 Sincerely,
 [Your Name]`

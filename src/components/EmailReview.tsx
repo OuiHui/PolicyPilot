@@ -32,20 +32,22 @@ export function EmailReview({ userEmail, parsedData, onSend, onBack }: EmailRevi
   const [body, setBody] = useState(
     `Dear ${parsedData.insurer} Claims Department,
 
-I am writing to formally appeal the denial of my recent claim (Policy #${parsedData.policyNumber}) for medical services rendered.
+I am writing to formally appeal the denial of my recent claim under Policy #${parsedData.policyNumber} for medical services rendered on [Date of Service].
 
-Your denial letter states that the service was "${parsedData.denialReason.toLowerCase()}." However, this determination appears to conflict with the coverage provisions outlined in my policy.
+According to your denial notice, the claim was denied on the basis that the "${parsedData.denialReason.toLowerCase()}." After reviewing my policy, I believe this determination is inconsistent with the terms of coverage.
 
-Specifically, [Citation from Section 4.B] of my policy document states: "Medically necessary services include those procedures that are appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or the quality of medical care rendered."
+Per Section 4.B of my policy, "Medically necessary services include those procedures that are appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or the quality of care provided."
 
-My treating physician has provided documentation confirming that this service was essential for my treatment and recovery. The procedure was performed based on professional medical judgment and aligns with standard medical practices for my condition.
+My treating physician has provided detailed medical documentation confirming that this procedure was clinically necessary for the management of my condition and consistent with accepted standards of care. The decision to perform this service was based on sound medical judgment and was essential for my treatment and recovery.
 
-I request that you:
-1. Review the enclosed medical documentation
-2. Reconsider your denial based on the policy provisions cited above
-3. Provide a detailed explanation if the denial is upheld
+Accordingly, I respectfully request that ${parsedData.insurer}:
+1. Conduct a full reconsideration of my claim in light of the supporting medical documentation provided;
+2. Review the determination under the cited policy provisions; and
+3. Provide a written explanation detailing the rationale and evidence used should the denial be upheld.
 
-I look forward to your response within the timeframe specified in my policy.
+Please confirm receipt of this appeal and advise me of any additional information required to facilitate your review. I look forward to your response within the timeframe specified under my policy’s appeals process.
+
+Thank you for your prompt attention to this matter.
 
 Sincerely,
 [Your Name]`
@@ -135,9 +137,6 @@ Sincerely,
                 onChange={(e) => setBody(e.target.value)}
                 className="w-full min-h-[500px] font-mono"
               />
-              <p className="text-gray-500 mt-1">
-                Policy citations are marked with [Citation from Section X.X]
-              </p>
             </div>
           </div>
         </Card>

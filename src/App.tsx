@@ -45,6 +45,9 @@ export type Case = {
   policyFiles: File[];
   parsedData: ParsedData | null;
   emailThread: EmailMessage[];
+  resolved?: boolean;
+  resolvedDate?: string;
+  feedback?: string;
 };
 
 export type ParsedData = {
@@ -195,6 +198,22 @@ export default function App() {
     setCurrentScreen(caseToResume.currentStep);
   };
 
+  const handleDeleteCase = (caseId: string) => {
+    setCases(cases.filter(c => c.id !== caseId));
+    if (currentCaseId === caseId) {
+      setCurrentCaseId(null);
+      setCurrentScreen('my-cases');
+    }
+  };
+
+  const handleResolveCase = (caseId: string, feedback?: string) => {
+    setCases(cases.map(c => 
+      c.id === caseId 
+        ? { ...c, resolved: true, resolvedDate: new Date().toISOString(), feedback }
+        : c
+    ));
+  };
+
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserEmail('');
@@ -212,10 +231,10 @@ export default function App() {
       case 'dashboard':
         return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
       case 'my-cases':
-        return <MyCases cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onStartNew={handleStartNewAppeal} />;
+        return <MyCases cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onStartNew={handleStartNewAppeal} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
       case 'case-detail':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
-        return <CaseDetail case={currentCase} onBack={() => setCurrentScreen('my-cases')} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <CaseDetail case={currentCase} onBack={() => setCurrentScreen('my-cases')} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
       case 'denial-upload':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <DenialUpload 

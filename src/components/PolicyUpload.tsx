@@ -106,7 +106,10 @@ export function PolicyUpload({ onComplete, onBack }: PolicyUploadProps) {
               <input
                 type="file"
                 accept="application/pdf"
-                onChange={(e) => handleFileSelect(e, setComprehensiveFile, false)}
+                onChange={(e) => {
+                  handleFileSelect(e, setComprehensiveFile, false);
+                  e.target.value = '';
+                }}
                 className="hidden"
               />
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer">
@@ -148,7 +151,10 @@ export function PolicyUpload({ onComplete, onBack }: PolicyUploadProps) {
                   type="file"
                   accept="application/pdf"
                   multiple
-                  onChange={(e) => handleFileSelect(e, setSobFiles, true)}
+                  onChange={(e) => {
+                    handleFileSelect(e, setSobFiles, true);
+                    e.target.value = '';
+                  }}
                   className="hidden"
                 />
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer">
@@ -178,7 +184,10 @@ export function PolicyUpload({ onComplete, onBack }: PolicyUploadProps) {
                   type="file"
                   accept="application/pdf"
                   multiple
-                  onChange={(e) => handleFileSelect(e, setEobFiles, true)}
+                  onChange={(e) => {
+                    handleFileSelect(e, setEobFiles, true);
+                    e.target.value = '';
+                  }}
                   className="hidden"
                 />
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer">
@@ -208,7 +217,10 @@ export function PolicyUpload({ onComplete, onBack }: PolicyUploadProps) {
                   type="file"
                   accept="application/pdf"
                   multiple
-                  onChange={(e) => handleFileSelect(e, setOtherFiles, true)}
+                  onChange={(e) => {
+                    handleFileSelect(e, setOtherFiles, true);
+                    e.target.value = '';
+                  }}
                   className="hidden"
                 />
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer">

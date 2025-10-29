@@ -1,16 +1,45 @@
-import { ArrowLeft, FileText, Mail, Download, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, FileText, Mail, Download, Calendar, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import type { Case } from '../App';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import type { Case, EmailMessage } from '../App';
 
 type CaseDetailProps = {
   case: Case;
   onBack: () => void;
+  onDeleteCase: (caseId: string) => void;
+  onResolveCase: (caseId: string, feedback?: string) => void;
 };
 
-export function CaseDetail({ case: caseItem, onBack }: CaseDetailProps) {
+export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase }: CaseDetailProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
+
   const getStatusText = (status: Case['status']) => {
     switch (status) {
       case 'uploading': return 'Uploading';
@@ -20,6 +49,47 @@ export function CaseDetail({ case: caseItem, onBack }: CaseDetailProps) {
       case 'awaiting-reply': return 'Awaiting Reply';
       case 'reply-received': return 'Reply Received';
       default: return status;
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleResolveClick = () => {
+    setResolveDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDeleteCase(caseItem.id);
+    setDeleteDialogOpen(false);
+    onBack();
+  };
+
+  const handleConfirmResolve = () => {
+    onResolveCase(caseItem.id, feedback);
+    setResolveDialogOpen(false);
+    setFeedback('');
+  };
+
+  const handleViewEmail = (email: EmailMessage) => {
+    setSelectedEmail(email);
+    setEmailDialogOpen(true);
+  };
+
+  const getEmailComments = (email: EmailMessage) => {
+    if (email.type === 'sent') {
+      return [
+        { type: 'positive', text: 'Strong opening that establishes the purpose clearly' },
+        { type: 'positive', text: 'Effective use of policy language to support your argument' },
+        { type: 'suggestion', text: 'Consider adding specific dates for stronger documentation' },
+      ];
+    } else {
+      return [
+        { type: 'concern', text: 'Response uses generic language without addressing specific policy sections' },
+        { type: 'opportunity', text: 'They haven\'t addressed your physician\'s documentation - highlight this in follow-up' },
+        { type: 'positive', text: 'They acknowledge receipt and timeline, which is procedurally important' },
+      ];
     }
   };
 
@@ -47,8 +117,31 @@ export function CaseDetail({ case: caseItem, onBack }: CaseDetailProps) {
                 )}
               </div>
             </div>
-            <Badge className="bg-blue-600">{getStatusText(caseItem.status)}</Badge>
+            <div className="flex gap-2">
+              {caseItem.resolved ? (
+                <Badge className="bg-green-600">Resolved</Badge>
+              ) : (
+                <Badge className="bg-blue-600">{getStatusText(caseItem.status)}</Badge>
+              )}
+            </div>
           </div>
+          {!caseItem.resolved && (
+            <div className="flex gap-2 mt-4">
+              <Button onClick={handleResolveClick} variant="default">
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Mark as Resolved
+              </Button>
+              <Button onClick={handleDeleteClick} variant="destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Case
+              </Button>
+            </div>
+          )}
+          {caseItem.resolved && caseItem.resolvedDate && (
+            <p className="text-gray-600 mt-2">
+              Resolved on {new Date(caseItem.resolvedDate).toLocaleDateString()}
+            </p>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -133,9 +226,19 @@ export function CaseDetail({ case: caseItem, onBack }: CaseDetailProps) {
                               {email.type === 'sent' ? 'To' : 'From'}: {email.type === 'sent' ? email.to : email.from}
                             </p>
                           </div>
-                          <Badge variant={email.type === 'sent' ? 'default' : 'secondary'}>
-                            {email.type === 'sent' ? 'Sent' : 'Received'}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={email.type === 'sent' ? 'default' : 'secondary'}>
+                              {email.type === 'sent' ? 'Sent' : 'Received'}
+                            </Badge>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleViewEmail(email)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </div>
                         <p className="text-gray-600">{new Date(email.date).toLocaleString()}</p>
                       </div>

@@ -31,25 +31,21 @@ export function FollowupReview({ userEmail, onSend, onBack }: FollowupReviewProp
   const [body, setBody] = useState(
     `Dear Claims Department,
 
-Thank you for your response. However, I must respectfully point out that your reply does not address the specific policy provisions I cited in my original appeal.
+Thank you for your recent correspondence regarding my appeal. After reviewing your response, I must respectfully note that several key policy and medical considerations outlined in my initial appeal were not directly addressed.
 
-In your response, you reference "clinical guidelines" and "evidence-based medical criteria." However, my policy contract does not stipulate that coverage decisions must be based on your internal clinical guidelines. The policy I purchased clearly states in [Citation from Section 4.B] that medically necessary services are those that are "appropriate and consistent with the diagnosis" as determined by my treating physician.
+Your letter references the use of "clinical guidelines" and "evidence-based criteria" in support of your determination. However, my policy does not state that internal guidelines may override the policy definitions of medical necessity. As referenced in Section 4.B of my policy, medically necessary services are defined as those that are "appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or quality of care."
 
-Specifically, your response fails to address:
+Accordingly, I am requesting clarification on the following points:
 
-1. How your "clinical guidelines" supersede the explicit coverage terms in my policy
-2. Why my physician's medical determination is being overridden by your internal review process
-3. The conflict between your denial and coverage for physician-recommended treatments
+1. The legal and contractual basis under which internal clinical guidelines are applied in lieu of the policy’s stated coverage criteria.  
+2. The rationale for disregarding the medical judgment of my treating physician, who determined that the procedure was clinically necessary for my diagnosis and recovery.  
+3. Documentation or disclosure indicating where your internal review criteria were referenced or incorporated into my policy documents at the time of purchase.  
 
-I am requesting that you provide:
+In light of these concerns, I am requesting that HealthGuard conduct a second-level review of my appeal, taking into account both the policy language and the supporting medical documentation provided by my physician.
 
-1. A detailed explanation of the legal basis for applying internal guidelines that are more restrictive than my policy terms
-2. Documentation showing how your clinical guidelines were disclosed in my policy documents
-3. Reconsideration of my claim based on the policy language I have cited
+If this matter cannot be resolved through internal review, please provide information on the process for requesting an independent external review under applicable state and federal regulations.
 
-If these policy conflicts cannot be resolved, please provide information about proceeding to external review.
-
-I look forward to your response addressing these specific questions.
+Thank you for your continued attention to this matter. I look forward to your timely and comprehensive response.
 
 Sincerely,
 [Your Name]`
