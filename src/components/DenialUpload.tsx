@@ -1,34 +1,63 @@
-import { useState } from 'react';
-import { Upload, FileText, Lock, CheckCircle, ArrowRight, ArrowLeft, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { ProgressBar } from './ProgressBar';
+import { useState } from "react";
+import {
+  Upload,
+  Lock,
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft,
+  X,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { ProgressBar } from "./ProgressBar";
 
 type DenialUploadProps = {
+  initialFiles?: File[];
   onContinue: (files: File[]) => void;
   onBack: () => void;
 };
 
-export function DenialUpload({ onContinue, onBack }: DenialUploadProps) {
-  const [files, setFiles] = useState<File[]>([]);
+export function DenialUpload({
+  initialFiles = [],
+  onContinue,
+  onBack,
+}: DenialUploadProps) {
+  const [files, setFiles] = useState<File[]>(initialFiles || []);
   const [dragOver, setDragOver] = useState(false);
+  const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const droppedFiles = Array.from(e.dataTransfer.files).filter(
-      file => file.type === 'application/pdf'
+      (file) => file.type === "application/pdf"
     );
-    setFiles([...files, ...droppedFiles]);
+    if (droppedFiles.length > 0) {
+      setFiles((prev) => {
+        const next = [...prev, ...droppedFiles];
+        setRecentlyAdded(droppedFiles[0].name);
+        setTimeout(() => setRecentlyAdded(null), 900);
+        return next;
+      });
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles) {
       const pdfFiles = Array.from(selectedFiles).filter(
-        file => file.type === 'application/pdf'
+        (file) => file.type === "application/pdf"
       );
-      setFiles([...files, ...pdfFiles]);
+      if (pdfFiles.length > 0) {
+        setFiles((prev) => {
+          const next = [...prev, ...pdfFiles];
+          setRecentlyAdded(pdfFiles[0].name);
+          setTimeout(() => setRecentlyAdded(null), 900);
+          return next;
+        });
+      }
+      // Clear the input so the same file can be re-selected after removal
+      e.currentTarget.value = "";
     }
   };
 
@@ -39,21 +68,24 @@ export function DenialUpload({ onContinue, onBack }: DenialUploadProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={1} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-gray-900 mb-2">Upload Your Denial Documents</h1>
           <p className="text-gray-600">
-            Upload the formal denial letter from your insurer or any related hospital bills.
+            Upload the formal denial letter from your insurer or any related
+            hospital bills.
           </p>
         </div>
 
         <Card className="p-6 mb-6">
           <label className="block mb-4">
-            <span className="text-gray-900">Denial Letter or Hospital Bill(s)</span>
+            <span className="text-gray-900">
+              Denial Letter or Hospital Bill(s)
+            </span>
             <span className="text-gray-500 ml-2">Multiple PDFs accepted</span>
           </label>
-          
+
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -63,7 +95,11 @@ export function DenialUpload({ onContinue, onBack }: DenialUploadProps) {
             onDrop={handleDrop}
             className={`
               border-2 border-dashed rounded-lg p-12 text-center transition-all cursor-pointer
-              ${dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+              ${
+                dragOver
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }
             `}
           >
             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -87,12 +123,18 @@ export function DenialUpload({ onContinue, onBack }: DenialUploadProps) {
 
           {files.length > 0 && (
             <div className="mt-6">
-              <p className="text-gray-700 mb-3">{files.length} file(s) uploaded:</p>
+              <p className="text-gray-700 mb-3">
+                {files.length} file(s) uploaded:
+              </p>
               <div className="space-y-2">
                 {files.map((file, index) => (
                   <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
+                    key={`${file.name}-${file.size}-${index}`}
+                    className={`flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg transition-transform ${
+                      recentlyAdded === file.name
+                        ? "ring-2 ring-green-200 scale-105"
+                        : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-600" />
@@ -123,7 +165,8 @@ export function DenialUpload({ onContinue, onBack }: DenialUploadProps) {
               All files are encrypted and HIPAA compliant.
             </p>
             <p className="text-green-700 mt-1">
-              Your documents are processed securely and never shared with third parties.
+              Your documents are processed securely and never shared with third
+              parties.
             </p>
           </div>
         </div>

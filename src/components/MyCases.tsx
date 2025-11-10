@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { FileText, Plus, Trash2, CheckCircle2 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Badge } from './ui/badge';
+import { useState } from "react";
+import { FileText, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from "./ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +20,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import type { Case } from '../App';
+} from "./ui/dialog";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
+import type { Case } from "../App";
 
 type MyCasesProps = {
   cases: Case[];
@@ -34,14 +34,28 @@ type MyCasesProps = {
   onResolveCase: (caseId: string, feedback?: string) => void;
 };
 
-export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteCase, onResolveCase }: MyCasesProps) {
+export function MyCases({
+  cases,
+  onViewCase,
+  onResumeCase,
+  onStartNew,
+  onDeleteCase,
+  onResolveCase,
+}: MyCasesProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
+  const [filter, setFilter] = useState<"active" | "resolved" | "all">("all");
 
   const isIncomplete = (caseItem: Case) => {
-    return ['denial-upload', 'policy-upload', 'extracted-info', 'strategy', 'email-review'].includes(caseItem.currentStep);
+    return [
+      "denial-upload",
+      "policy-upload",
+      "extracted-info",
+      "strategy",
+      "email-review",
+    ].includes(caseItem.currentStep);
   };
 
   const handleDeleteClick = (caseId: string) => {
@@ -67,46 +81,68 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
       onResolveCase(selectedCaseId, feedback);
       setResolveDialogOpen(false);
       setSelectedCaseId(null);
-      setFeedback('');
+      setFeedback("");
     }
   };
 
-  const activeCases = cases.filter(c => !c.resolved);
-  const resolvedCases = cases.filter(c => c.resolved);
+  const activeCases = cases.filter((c) => !c.resolved);
+  const resolvedCases = cases.filter((c) => c.resolved);
 
-  const getStepText = (step: Case['currentStep']) => {
+  const getStepText = (step: Case["currentStep"]) => {
     switch (step) {
-      case 'denial-upload': return 'Uploading Denial Documents';
-      case 'policy-upload': return 'Uploading Policy Documents';
-      case 'extracted-info': return 'Reviewing Extracted Info';
-      case 'strategy': return 'Reviewing Strategy';
-      case 'email-review': return 'Drafting Email';
-      case 'email-sent': return 'Email Sent';
-      case 'reply-received': return 'Reply Received';
-      case 'followup-review': return 'Drafting Follow-up';
-      default: return step;
+      case "denial-upload":
+        return "Uploading Denial Documents";
+      case "policy-upload":
+        return "Uploading Policy Documents";
+      case "extracted-info":
+        return "Reviewing Extracted Info";
+      case "strategy":
+        return "Reviewing Strategy";
+      case "email-review":
+        return "Drafting Email";
+      case "email-sent":
+        return "Email Sent";
+      case "reply-received":
+        return "Reply Received";
+      case "followup-review":
+        return "Drafting Follow-up";
+      default:
+        return step;
     }
   };
 
-  const getStatusText = (status: Case['status']) => {
+  const getStatusText = (status: Case["status"]) => {
     switch (status) {
-      case 'uploading': return 'Uploading';
-      case 'analyzing': return 'Analysis Complete';
-      case 'ready-to-send': return 'Ready to Send';
-      case 'sent': return 'Sent';
-      case 'awaiting-reply': return 'Awaiting Reply';
-      case 'reply-received': return 'Reply Received';
-      default: return status;
+      case "uploading":
+        return "Uploading";
+      case "analyzing":
+        return "Analysis Complete";
+      case "ready-to-send":
+        return "Ready to Send";
+      case "sent":
+        return "Sent";
+      case "awaiting-reply":
+        return "Awaiting Reply";
+      case "reply-received":
+        return "Reply Received";
+      default:
+        return status;
     }
   };
 
-  const getStatusColor = (status: Case['status']) => {
+  const getStatusColor = (status: Case["status"]) => {
     switch (status) {
-      case 'analyzing': return 'bg-blue-600';
-      case 'ready-to-send': return 'bg-green-600';
-      case 'sent': case 'awaiting-reply': return 'bg-orange-600';
-      case 'reply-received': return 'bg-purple-600';
-      default: return 'bg-gray-600';
+      case "analyzing":
+        return "bg-blue-600";
+      case "ready-to-send":
+        return "bg-green-600";
+      case "sent":
+      case "awaiting-reply":
+        return "bg-orange-600";
+      case "reply-received":
+        return "bg-purple-600";
+      default:
+        return "bg-gray-600";
     }
   };
 
@@ -120,10 +156,42 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
               Manage and track all your insurance appeals
             </p>
           </div>
-          <Button onClick={onStartNew} size="lg">
-            <Plus className="w-5 h-5 mr-2" />
-            New Appeal
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex bg-white rounded-lg border overflow-hidden">
+              <button
+                onClick={() => setFilter("all")}
+                className={`px-3 py-2 ${
+                  filter === "all" ? "bg-blue-600 text-white" : "text-gray-600"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter("active")}
+                className={`px-3 py-2 ${
+                  filter === "active"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600"
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setFilter("resolved")}
+                className={`px-3 py-2 ${
+                  filter === "resolved"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600"
+                }`}
+              >
+                Resolved
+              </button>
+            </div>
+            <Button onClick={onStartNew} size="lg">
+              <Plus className="w-5 h-5 mr-2" />
+              New Appeal
+            </Button>
+          </div>
         </div>
 
         {activeCases.length === 0 && resolvedCases.length === 0 ? (
@@ -140,142 +208,162 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
           </Card>
         ) : (
           <>
-            {activeCases.length > 0 && (
-              <>
-                <h2 className="text-gray-900 mb-4">Active Cases</h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {activeCases.map((caseItem) => (
-                    <Card
-                      key={caseItem.id}
-                      className="p-6 hover:shadow-lg transition-shadow"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <FileText className="w-8 h-8 text-blue-600" />
-                        {caseItem.hasNewEmail && (
-                          <Badge variant="destructive" className="animate-pulse">
-                            New
-                          </Badge>
-                        )}
-                      </div>
-                      <h3 className="text-gray-900 mb-2">
-                        {caseItem.insuranceCompany}
-                      </h3>
-                      {caseItem.parsedData?.denialReason && (
-                        <div className="mb-3">
-                          <p className="text-gray-900 mb-1">Denial Reason</p>
-                          <p className="text-gray-600">{caseItem.parsedData.denialReason}</p>
-                        </div>
-                      )}
-                      <p className="text-gray-500 mb-3">
-                        Created {new Date(caseItem.dateCreated).toLocaleDateString()}
-                      </p>
-                      {isIncomplete(caseItem) ? (
-                        <>
-                          <Badge className="bg-yellow-600 mb-3">
-                            In Progress: {getStepText(caseItem.currentStep)}
-                          </Badge>
-                          <Button 
-                            onClick={() => onResumeCase(caseItem.id)} 
-                            className="w-full mt-3"
-                          >
-                            Resume
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Badge className={getStatusColor(caseItem.status) + " mb-3"}>
-                            {getStatusText(caseItem.status)}
-                          </Badge>
-                          <div className="space-y-2 mt-3">
-                            <Button 
-                              onClick={() => onViewCase(caseItem.id)} 
-                              className="w-full"
-                              variant="outline"
+            {(filter === "all" || filter === "active") &&
+              activeCases.length > 0 && (
+                <>
+                  <h2 className="text-gray-900 mb-4">Active Cases</h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {activeCases.map((caseItem) => (
+                      <Card
+                        key={caseItem.id}
+                        className="p-6 hover:shadow-lg transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <FileText className="w-8 h-8 text-blue-600" />
+                          {caseItem.hasNewEmail && (
+                            <Badge
+                              variant="destructive"
+                              className="animate-pulse"
                             >
-                              View Details
-                            </Button>
-                            <div className="flex gap-2">
-                              <Button 
-                                onClick={() => handleResolveClick(caseItem.id)} 
-                                className="flex-1"
-                                variant="default"
-                                size="sm"
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
-                                Resolve
-                              </Button>
-                              <Button 
-                                onClick={() => handleDeleteClick(caseItem.id)} 
-                                className="flex-1"
-                                variant="destructive"
-                                size="sm"
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {resolvedCases.length > 0 && (
-              <>
-                <h2 className="text-gray-900 mb-4">Resolved Cases</h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {resolvedCases.map((caseItem) => (
-                    <Card
-                      key={caseItem.id}
-                      className="p-6 hover:shadow-lg transition-shadow bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <FileText className="w-8 h-8 text-gray-400" />
-                        <Badge className="bg-green-600">Resolved</Badge>
-                      </div>
-                      <h3 className="text-gray-900 mb-2">
-                        {caseItem.insuranceCompany}
-                      </h3>
-                      {caseItem.parsedData?.denialReason && (
-                        <div className="mb-3">
-                          <p className="text-gray-900 mb-1">Denial Reason</p>
-                          <p className="text-gray-600">{caseItem.parsedData.denialReason}</p>
+                              New
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      <p className="text-gray-500 mb-1">
-                        Created {new Date(caseItem.dateCreated).toLocaleDateString()}
-                      </p>
-                      {caseItem.resolvedDate && (
+                        <h3 className="text-gray-900 mb-2">
+                          {caseItem.insuranceCompany}
+                        </h3>
+                        {caseItem.parsedData?.denialReason && (
+                          <div className="mb-3">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                              Denial Reason
+                            </h4>
+                            <p className="text-gray-700">{`“${caseItem.parsedData.denialReason}”`}</p>
+                          </div>
+                        )}
                         <p className="text-gray-500 mb-3">
-                          Resolved {new Date(caseItem.resolvedDate).toLocaleDateString()}
+                          Created{" "}
+                          {new Date(caseItem.dateCreated).toLocaleDateString()}
                         </p>
-                      )}
-                      <div className="space-y-2 mt-3">
-                        <Button 
-                          onClick={() => onViewCase(caseItem.id)} 
-                          className="w-full"
-                          variant="outline"
-                        >
-                          View Details
-                        </Button>
-                        <Button 
-                          onClick={() => handleDeleteClick(caseItem.id)} 
-                          className="w-full"
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
+                        {isIncomplete(caseItem) ? (
+                          <>
+                            <Badge className="bg-yellow-600 mb-3">
+                              In Progress: {getStepText(caseItem.currentStep)}
+                            </Badge>
+                            <Button
+                              onClick={() => onResumeCase(caseItem.id)}
+                              className="w-full mt-3"
+                            >
+                              Resume
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Badge
+                              className={
+                                getStatusColor(caseItem.status) + " mb-3"
+                              }
+                            >
+                              {getStatusText(caseItem.status)}
+                            </Badge>
+                            <div className="space-y-2 mt-3">
+                              <Button
+                                onClick={() => onViewCase(caseItem.id)}
+                                className="w-full"
+                                variant="outline"
+                              >
+                                View Details
+                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() =>
+                                    handleResolveClick(caseItem.id)
+                                  }
+                                  className="flex-1"
+                                  variant="default"
+                                  size="sm"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                                  Resolve
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteClick(caseItem.id)}
+                                  className="flex-1"
+                                  variant="destructive"
+                                  size="sm"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
+
+            {(filter === "all" || filter === "resolved") &&
+              resolvedCases.length > 0 && (
+                <>
+                  <h2 className="text-gray-900 mb-4">Resolved Cases</h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {resolvedCases.map((caseItem) => (
+                      <Card
+                        key={caseItem.id}
+                        className="p-6 hover:shadow-lg transition-shadow bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <FileText className="w-8 h-8 text-gray-400" />
+                          <Badge className="bg-green-600">Resolved</Badge>
+                        </div>
+                        <h3 className="text-gray-900 mb-2">
+                          {caseItem.insuranceCompany}
+                        </h3>
+                        {caseItem.parsedData?.denialReason && (
+                          <div className="mb-3">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                              Denial Reason
+                            </h4>
+                            <p className="text-gray-700">{`“${caseItem.parsedData.denialReason}”`}</p>
+                          </div>
+                        )}
+                        <p className="text-gray-500 mb-1">
+                          Created{" "}
+                          {new Date(caseItem.dateCreated).toLocaleDateString()}
+                        </p>
+                        {caseItem.resolvedDate && (
+                          <p className="text-gray-500 mb-3">
+                            Resolved{" "}
+                            {new Date(
+                              caseItem.resolvedDate
+                            ).toLocaleDateString()}
+                          </p>
+                        )}
+                        <div className="space-y-2 mt-3">
+                          <Button
+                            onClick={() => onViewCase(caseItem.id)}
+                            className="w-full"
+                            variant="outline"
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteClick(caseItem.id)}
+                            className="w-full"
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
           </>
         )}
       </div>
@@ -286,12 +374,16 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Case?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this case and all associated data.
+              This action cannot be undone. This will permanently delete this
+              case and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -304,7 +396,8 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
           <DialogHeader>
             <DialogTitle>Resolve Case</DialogTitle>
             <DialogDescription>
-              Mark this case as resolved and optionally provide feedback about your experience.
+              Mark this case as resolved and optionally provide feedback about
+              your experience.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -321,12 +414,13 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setResolveDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirmResolve}>
-              Mark as Resolved
-            </Button>
+            <Button onClick={handleConfirmResolve}>Mark as Resolved</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

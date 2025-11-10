@@ -1,9 +1,18 @@
-import { useState } from 'react';
-import { ArrowLeft, FileText, Mail, Download, Calendar, Trash2, CheckCircle2, Eye } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
+import { useState } from "react";
+import {
+  ArrowLeft,
+  FileText,
+  Mail,
+  Download,
+  Calendar,
+  Trash2,
+  CheckCircle2,
+  Eye,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Separator } from "./ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from "./ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -21,10 +30,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import type { Case, EmailMessage } from '../App';
+} from "./ui/dialog";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
+import type { Case, EmailMessage } from "../App";
 
 type CaseDetailProps = {
   case: Case;
@@ -33,22 +42,37 @@ type CaseDetailProps = {
   onResolveCase: (caseId: string, feedback?: string) => void;
 };
 
-export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase }: CaseDetailProps) {
+export function CaseDetail({
+  case: caseItem,
+  onBack,
+  onDeleteCase,
+  onResolveCase,
+}: CaseDetailProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-  const getStatusText = (status: Case['status']) => {
+  const getStatusText = (status: Case["status"]) => {
     switch (status) {
-      case 'uploading': return 'Uploading';
-      case 'analyzing': return 'Analysis Complete';
-      case 'ready-to-send': return 'Ready to Send';
-      case 'sent': return 'Sent';
-      case 'awaiting-reply': return 'Awaiting Reply';
-      case 'reply-received': return 'Reply Received';
-      default: return status;
+      case "uploading":
+        return "Uploading";
+      case "analyzing":
+        return "Analysis Complete";
+      case "ready-to-send":
+        return "Ready to Send";
+      case "sent":
+        return "Sent";
+      case "awaiting-reply":
+        return "Awaiting Reply";
+      case "reply-received":
+        return "Reply Received";
+      default:
+        return status;
     }
   };
 
@@ -69,7 +93,7 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
   const handleConfirmResolve = () => {
     onResolveCase(caseItem.id, feedback);
     setResolveDialogOpen(false);
-    setFeedback('');
+    setFeedback("");
   };
 
   const handleViewEmail = (email: EmailMessage) => {
@@ -77,18 +101,43 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
     setEmailDialogOpen(true);
   };
 
+  const handleViewFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setSelectedFileUrl(url);
+    setSelectedFileName(file.name);
+    setFileDialogOpen(true);
+  };
+
   const getEmailComments = (email: EmailMessage) => {
-    if (email.type === 'sent') {
+    if (email.type === "sent") {
       return [
-        { type: 'positive', text: 'Strong opening that establishes the purpose clearly' },
-        { type: 'positive', text: 'Effective use of policy language to support your argument' },
-        { type: 'suggestion', text: 'Consider adding specific dates for stronger documentation' },
+        {
+          type: "positive",
+          text: "Strong opening that establishes the purpose clearly",
+        },
+        {
+          type: "positive",
+          text: "Effective use of policy language to support your argument",
+        },
+        {
+          type: "suggestion",
+          text: "Consider adding specific dates for stronger documentation",
+        },
       ];
     } else {
       return [
-        { type: 'concern', text: 'Response uses generic language without addressing specific policy sections' },
-        { type: 'opportunity', text: 'They haven\'t addressed your physician\'s documentation - highlight this in follow-up' },
-        { type: 'positive', text: 'They acknowledge receipt and timeline, which is procedurally important' },
+        {
+          type: "concern",
+          text: "Response uses generic language without addressing specific policy sections",
+        },
+        {
+          type: "opportunity",
+          text: "They haven't addressed your physician's documentation - highlight this in follow-up",
+        },
+        {
+          type: "positive",
+          text: "They acknowledge receipt and timeline, which is procedurally important",
+        },
       ];
     }
   };
@@ -110,7 +159,10 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               <div className="flex items-center gap-4 text-gray-600">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>Created {new Date(caseItem.dateCreated).toLocaleDateString()}</span>
+                  <span>
+                    Created{" "}
+                    {new Date(caseItem.dateCreated).toLocaleDateString()}
+                  </span>
                 </div>
                 {caseItem.parsedData && (
                   <span>Policy #{caseItem.parsedData.policyNumber}</span>
@@ -121,7 +173,9 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               {caseItem.resolved ? (
                 <Badge className="bg-green-600">Resolved</Badge>
               ) : (
-                <Badge className="bg-blue-600">{getStatusText(caseItem.status)}</Badge>
+                <Badge className="bg-blue-600">
+                  {getStatusText(caseItem.status)}
+                </Badge>
               )}
             </div>
           </div>
@@ -152,14 +206,30 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               <div>
                 <p className="text-gray-700 mb-2">Denial Documents</p>
                 {caseItem.denialFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
+                  >
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-gray-600" />
                       <span className="text-gray-900">{file.name}</span>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      <Download className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewFile(file)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewFile(file)}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -167,17 +237,37 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               {caseItem.policyFiles.length > 0 && (
                 <div>
                   <p className="text-gray-700 mb-2">
-                    Policy Documents ({caseItem.policyType === 'comprehensive' ? 'Comprehensive' : 'Supplementary'})
+                    Policy Documents (
+                    {caseItem.policyType === "comprehensive"
+                      ? "Comprehensive"
+                      : "Supplementary"}
+                    )
                   </p>
                   {caseItem.policyFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
+                    >
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-gray-600" />
                         <span className="text-gray-900">{file.name}</span>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <Download className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewFile(file)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewFile(file)}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -196,15 +286,81 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
                 </div>
                 <div>
                   <p className="text-gray-500 mb-1">Policy Number</p>
-                  <p className="text-gray-900">{caseItem.parsedData.policyNumber}</p>
+                  <p className="text-gray-900">
+                    {caseItem.parsedData.policyNumber}
+                  </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-gray-500 mb-1">Denial Reason</p>
-                  <p className="text-gray-900">{caseItem.parsedData.denialReason}</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                    Denial Reason
+                  </h3>
+                  <p className="text-gray-700">{`"${caseItem.parsedData.denialReason}"`}</p>
                 </div>
               </div>
             </Card>
           )}
+
+          {/* Progress Timeline */}
+          <Card className="p-6">
+            <h2 className="text-gray-900 mb-4">Progress Timeline</h2>
+            <div className="flex items-center justify-between">
+              {[
+                { label: "Upload", step: 0 },
+                { label: "Analysis", step: 1 },
+                { label: "Email Sent", step: 2 },
+                { label: "Resolved", step: 3 },
+              ].map((stage, idx) => {
+                const statusIndex = caseItem.resolved
+                  ? 3
+                  : caseItem.status === "uploading"
+                  ? 0
+                  : caseItem.status === "analyzing"
+                  ? 1
+                  : caseItem.status === "sent" ||
+                    caseItem.status === "awaiting-reply" ||
+                    caseItem.status === "reply-received"
+                  ? 2
+                  : 1;
+                const isDone = idx <= statusIndex;
+                const isActive = idx === statusIndex;
+                return (
+                  <div key={stage.label} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                          isDone
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-600"
+                        } ${isActive ? "ring-4 ring-blue-200" : ""}`}
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          idx + 1
+                        )}
+                      </div>
+                      <p
+                        className={`text-sm mt-2 font-medium ${
+                          isDone ? "text-gray-900" : "text-gray-500"
+                        }`}
+                      >
+                        {stage.label}
+                      </p>
+                    </div>
+                    {idx < 3 && (
+                      <div
+                        className={`h-1 flex-1 mx-2 ${
+                          isDone ? "bg-blue-600" : "bg-gray-200"
+                        }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Email Thread */}
 
           {/* Email Thread */}
           {caseItem.emailThread.length > 0 && (
@@ -215,23 +371,32 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
                   <div key={email.id}>
                     {index > 0 && <Separator className="my-4" />}
                     <div className="flex items-start gap-3">
-                      <Mail className={`w-5 h-5 flex-shrink-0 mt-1 ${
-                        email.type === 'sent' ? 'text-blue-600' : 'text-green-600'
-                      }`} />
+                      <Mail
+                        className={`w-5 h-5 flex-shrink-0 mt-1 ${
+                          email.type === "sent"
+                            ? "text-blue-600"
+                            : "text-green-600"
+                        }`}
+                      />
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <p className="text-gray-900">{email.subject}</p>
                             <p className="text-gray-500">
-                              {email.type === 'sent' ? 'To' : 'From'}: {email.type === 'sent' ? email.to : email.from}
+                              {email.type === "sent" ? "To" : "From"}:{" "}
+                              {email.type === "sent" ? email.to : email.from}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={email.type === 'sent' ? 'default' : 'secondary'}>
-                              {email.type === 'sent' ? 'Sent' : 'Received'}
+                            <Badge
+                              variant={
+                                email.type === "sent" ? "default" : "secondary"
+                              }
+                            >
+                              {email.type === "sent" ? "Sent" : "Received"}
                             </Badge>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => handleViewEmail(email)}
                             >
@@ -240,7 +405,9 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
                             </Button>
                           </div>
                         </div>
-                        <p className="text-gray-600">{new Date(email.date).toLocaleString()}</p>
+                        <p className="text-gray-600">
+                          {new Date(email.date).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -250,6 +417,82 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
           )}
         </div>
       </div>
+      {/* Email Preview Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedEmail?.subject}</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            <p className="text-sm text-gray-500">
+              {selectedEmail
+                ? selectedEmail.type === "sent"
+                  ? `To: ${selectedEmail.to}`
+                  : `From: ${selectedEmail.from}`
+                : ""}
+            </p>
+            <p className="text-gray-500 text-xs mt-2">
+              {selectedEmail
+                ? new Date(selectedEmail.date).toLocaleString()
+                : ""}
+            </p>
+            <div className="mt-4">
+              <p className="whitespace-pre-wrap text-gray-700">
+                {selectedEmail?.body}
+              </p>
+            </div>
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Preview / Download Dialog */}
+      <Dialog
+        open={fileDialogOpen}
+        onOpenChange={(open: boolean | ((prevState: boolean) => boolean)) => {
+          setFileDialogOpen(open);
+          if (!open && selectedFileUrl) {
+            URL.revokeObjectURL(selectedFileUrl);
+            setSelectedFileUrl(null);
+            setSelectedFileName(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedFileName}</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            {selectedFileUrl ? (
+              <div className="space-y-4">
+                <iframe
+                  src={selectedFileUrl}
+                  className="w-full h-[60vh] border"
+                  title={selectedFileName || "file preview"}
+                />
+                <a
+                  href={selectedFileUrl}
+                  download={selectedFileName || ""}
+                  className="text-blue-600 underline"
+                >
+                  Download
+                </a>
+              </div>
+            ) : (
+              <p className="text-gray-700">No file selected</p>
+            )}
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFileDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

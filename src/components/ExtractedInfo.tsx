@@ -1,12 +1,18 @@
-import { useState } from 'react';
-import { ArrowRight, ArrowLeft, Edit } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ProgressBar } from './ProgressBar';
-import type { ParsedData } from '../App';
+import { useState } from "react";
+import { ArrowRight, ArrowLeft, Edit } from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { ProgressBar } from "./ProgressBar";
+import type { ParsedData } from "../App";
 
 type ExtractedInfoProps = {
   data: ParsedData;
@@ -16,39 +22,40 @@ type ExtractedInfoProps = {
 
 export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
   const [insurer, setInsurer] = useState(data.insurer);
-  const [customInsurer, setCustomInsurer] = useState('');
+  const [customInsurer, setCustomInsurer] = useState("");
   const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
   const [denialReason, setDenialReason] = useState(data.denialReason);
 
   const commonInsurers = [
-    'HealthGuard Insurance Co.',
-    'Blue Cross Blue Shield',
-    'Aetna',
-    'UnitedHealthcare',
-    'Cigna',
-    'Humana',
-    'Kaiser Permanente',
-    'Anthem',
-    'Other'
+    "HealthGuard Insurance Co.",
+    "Blue Cross Blue Shield",
+    "Aetna",
+    "UnitedHealthcare",
+    "Cigna",
+    "Humana",
+    "Kaiser Permanente",
+    "Anthem",
+    "Other",
   ];
 
   const handleSave = () => {
     onSave({
-      insurer: insurer === 'Other' ? customInsurer : insurer,
+      insurer: insurer === "Other" ? customInsurer : insurer,
       policyNumber,
-      denialReason
+      denialReason,
     });
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={2} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-gray-900 mb-2">Review Extracted Information</h1>
           <p className="text-gray-600">
-            We've extracted key information from your documents. Please review and edit as needed.
+            We've extracted key information from your documents. Please review
+            and edit as needed.
           </p>
         </div>
 
@@ -80,7 +87,7 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
               </p>
             </div>
 
-            {insurer === 'Other' && (
+            {insurer === "Other" && (
               <div>
                 <label className="block text-gray-700 mb-2">
                   Custom Insurance Company Name
@@ -110,7 +117,7 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">
+              <label className="block text-gray-700 font-semibold mb-2">
                 Denial Reason *
               </label>
               <Textarea
@@ -128,8 +135,9 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
 
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-8">
           <p className="text-blue-900">
-            <strong>Why edit?</strong> Accurate information helps us build a stronger appeal strategy. 
-            If our AI misread any details, you can correct them here.
+            <strong>Why edit?</strong> Accurate information helps us build a
+            stronger appeal strategy. If our AI misread any details, you can
+            correct them here.
           </p>
         </div>
 
@@ -140,7 +148,12 @@ export function ExtractedInfo({ data, onSave, onBack }: ExtractedInfoProps) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!insurer || (insurer === 'Other' && !customInsurer) || !policyNumber || !denialReason}
+            disabled={
+              !insurer ||
+              (insurer === "Other" && !customInsurer) ||
+              !policyNumber ||
+              !denialReason
+            }
             size="lg"
             className="px-8"
           >
