@@ -39,7 +39,8 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
     return ['denial-upload', 'policy-upload', 'extracted-info', 'strategy', 'email-review'].includes(caseItem.currentStep);
   };
 
-  const getStatusText = (status: Case['status']) => {
+  const getStatusText = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'Resolved';
     switch (status) {
       case 'uploading': return 'Uploading';
       case 'analyzing': return 'Analyzing';
@@ -51,7 +52,8 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
     }
   };
 
-  const getStatusColor = (status: Case['status']) => {
+  const getStatusColor = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'bg-green-600';
     switch (status) {
       case 'analyzing': return 'bg-blue-600';
       case 'ready-to-send': return 'bg-green-600';
@@ -95,14 +97,17 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                       <Badge variant="destructive">New</Badge>
                     )}
                   </div>
-                  <h3 className="text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {caseItem.insuranceCompany}
                   </h3>
+                  <p className="text-sm text-gray-700 mb-2 font-medium leading-snug">
+                    {caseItem.denialReasonTitle}
+                  </p>
                   <p className="text-gray-500 mb-3">
                     {new Date(caseItem.dateCreated).toLocaleDateString()}
                   </p>
-                  <Badge className={getStatusColor(caseItem.status) + " mb-3"}>
-                    {getStatusText(caseItem.status)}
+                  <Badge className={getStatusColor(caseItem.status, caseItem.resolved) + " mb-3"}>
+                    {getStatusText(caseItem.status, caseItem.resolved)}
                   </Badge>
                   {isIncomplete(caseItem) ? (
                     <Button 

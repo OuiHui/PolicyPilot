@@ -88,7 +88,8 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
     }
   };
 
-  const getStatusText = (status: Case['status']) => {
+  const getStatusText = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'Resolved';
     switch (status) {
       case 'uploading': return 'Uploading';
       case 'analyzing': return 'Analysis Complete';
@@ -100,7 +101,8 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
     }
   };
 
-  const getStatusColor = (status: Case['status']) => {
+  const getStatusColor = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'bg-green-600';
     switch (status) {
       case 'analyzing': return 'bg-blue-600';
       case 'ready-to-send': return 'bg-green-600';
@@ -160,10 +162,13 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
                       <h3 className="text-gray-900 mb-2">
                         {caseItem.insuranceCompany}
                       </h3>
-                      {caseItem.parsedData?.denialReason && (
+                      <p className="text-sm text-gray-600 mb-3 font-medium">
+                        {caseItem.denialReasonTitle}
+                      </p>
+                      {caseItem.parsedData?.denialReason && caseItem.denialReasonTitle !== caseItem.parsedData.denialReason && (
                         <div className="mb-3">
-                          <p className="text-gray-900 mb-1">Denial Reason</p>
-                          <p className="text-gray-600">{caseItem.parsedData.denialReason}</p>
+                          <p className="text-xs text-gray-500 mb-1">Full Denial Reason</p>
+                          <p className="text-sm text-gray-600">{caseItem.parsedData.denialReason}</p>
                         </div>
                       )}
                       <p className="text-gray-500 mb-3">
@@ -183,8 +188,8 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
                         </>
                       ) : (
                         <>
-                          <Badge className={getStatusColor(caseItem.status) + " mb-3"}>
-                            {getStatusText(caseItem.status)}
+                          <Badge className={getStatusColor(caseItem.status, caseItem.resolved) + " mb-3"}>
+                            {getStatusText(caseItem.status, caseItem.resolved)}
                           </Badge>
                           <div className="space-y-2 mt-3">
                             <Button 
@@ -239,10 +244,13 @@ export function MyCases({ cases, onViewCase, onResumeCase, onStartNew, onDeleteC
                       <h3 className="text-gray-900 mb-2">
                         {caseItem.insuranceCompany}
                       </h3>
-                      {caseItem.parsedData?.denialReason && (
+                      <p className="text-sm text-gray-600 mb-3 font-medium">
+                        {caseItem.denialReasonTitle}
+                      </p>
+                      {caseItem.parsedData?.denialReason && caseItem.denialReasonTitle !== caseItem.parsedData.denialReason && (
                         <div className="mb-3">
-                          <p className="text-gray-900 mb-1">Denial Reason</p>
-                          <p className="text-gray-600">{caseItem.parsedData.denialReason}</p>
+                          <p className="text-xs text-gray-500 mb-1">Full Denial Reason</p>
+                          <p className="text-sm text-gray-600">{caseItem.parsedData.denialReason}</p>
                         </div>
                       )}
                       <p className="text-gray-500 mb-1">

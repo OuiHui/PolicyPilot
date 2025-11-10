@@ -36,6 +36,7 @@ export type CaseStep = 'denial-upload' | 'policy-upload' | 'extracted-info' | 's
 export type Case = {
   id: string;
   insuranceCompany: string;
+  denialReasonTitle: string;
   dateCreated: string;
   status: CaseStatus;
   currentStep: CaseStep;
@@ -86,6 +87,7 @@ export default function App() {
     const newCase: Case = {
       id: Date.now().toString(),
       insuranceCompany: 'Unknown',
+      denialReasonTitle: 'Pending Analysis',
       dateCreated: new Date().toISOString(),
       status: 'uploading',
       currentStep: 'denial-upload',
@@ -128,7 +130,7 @@ export default function App() {
       };
       setCases(prevCases => prevCases.map(c => 
         c.id === currentCaseId 
-          ? { ...c, parsedData, insuranceCompany: parsedData.insurer }
+          ? { ...c, parsedData, insuranceCompany: parsedData.insurer, denialReasonTitle: parsedData.denialReason }
           : c
       ));
       setCurrentScreen('extracted-info');
@@ -139,7 +141,7 @@ export default function App() {
     if (!currentCaseId) return;
     setCases(cases.map(c => 
       c.id === currentCaseId 
-        ? { ...c, parsedData: data, insuranceCompany: data.insurer, currentStep: 'strategy' }
+        ? { ...c, parsedData: data, insuranceCompany: data.insurer, denialReasonTitle: data.denialReason, currentStep: 'strategy' }
         : c
     ));
     setCurrentScreen('strategy');

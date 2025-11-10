@@ -40,7 +40,8 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
 
-  const getStatusText = (status: Case['status']) => {
+  const getStatusText = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'Resolved';
     switch (status) {
       case 'uploading': return 'Uploading';
       case 'analyzing': return 'Analysis Complete';
@@ -107,6 +108,9 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               <h1 className="text-gray-900 mb-2">
                 {caseItem.insuranceCompany}
               </h1>
+              <p className="text-lg text-gray-700 mb-2 font-medium">
+                {caseItem.denialReasonTitle}
+              </p>
               <div className="flex items-center gap-4 text-gray-600">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
@@ -121,7 +125,7 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
               {caseItem.resolved ? (
                 <Badge className="bg-green-600">Resolved</Badge>
               ) : (
-                <Badge className="bg-blue-600">{getStatusText(caseItem.status)}</Badge>
+                <Badge className="bg-blue-600">{getStatusText(caseItem.status, caseItem.resolved)}</Badge>
               )}
             </div>
           </div>
@@ -250,6 +254,136 @@ export function CaseDetail({ case: caseItem, onBack, onDeleteCase, onResolveCase
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Case?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this case and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resolve Case Dialog */}
+      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Case</DialogTitle>
+            <DialogDescription>
+              Mark this case as resolved and optionally provide feedback about your experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="feedback">Feedback (Optional)</Label>
+              <Textarea
+                id="feedback"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="How did your appeal go? Any insights to share?"
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmResolve}>
+              Mark as Resolved
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-3xl h-[90vh] p-0 flex flex-col gap-0">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <DialogHeader>
+              <DialogTitle>{selectedEmail?.subject}</DialogTitle>
+              <DialogDescription>
+                {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'} on {selectedEmail && new Date(selectedEmail.date).toLocaleString()}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-4 pb-4 border-b">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      {selectedEmail?.type === 'sent' ? 'To' : 'From'}
+                    </p>
+                    <p className="text-gray-900">
+                      {selectedEmail?.type === 'sent' ? selectedEmail.to : selectedEmail?.from}
+                    </p>
+                  </div>
+                  <Badge variant={selectedEmail?.type === 'sent' ? 'default' : 'secondary'}>
+                    {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'}
+                  </Badge>
+                </div>
+                
+                <div className="prose max-w-none">
+                  <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    {selectedEmail?.body}
+                  </div>
+                </div>
+              </div>
+
+              {selectedEmail && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">AI Analysis</h4>
+                  <div className="space-y-2">
+                    {getEmailComments(selectedEmail).map((comment, index) => (
+                      <div 
+                        key={index} 
+                        className={`p-3 rounded-lg ${
+                          comment.type === 'positive' 
+                            ? 'bg-green-50 border border-green-200' 
+                            : comment.type === 'concern'
+                            ? 'bg-red-50 border border-red-200'
+                            : 'bg-blue-50 border border-blue-200'
+                        }`}
+                      >
+                        <p className={`text-sm font-medium mb-1 ${
+                          comment.type === 'positive' 
+                            ? 'text-green-800' 
+                            : comment.type === 'concern'
+                            ? 'text-red-800'
+                            : 'text-blue-800'
+                        }`}>
+                          {comment.type === 'positive' ? '✓ Strength' : comment.type === 'concern' ? '⚠ Concern' : '💡 Suggestion'}
+                        </p>
+                        <p className="text-sm text-gray-700">{comment.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 px-6 pb-6 pt-4 border-t">
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
