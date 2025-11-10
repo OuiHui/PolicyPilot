@@ -229,17 +229,12 @@ export function MyCases({
                             </Badge>
                           )}
                         </div>
-                        <h3 className="text-gray-900 mb-2">
-                          {caseItem.insuranceCompany}
+                        <h3 className="text-gray-900 font-bold mb-3 text-lg">
+                          {caseItem.parsedData?.denialReason || "Processing..."}
                         </h3>
-                        {caseItem.parsedData?.denialReason && (
-                          <div className="mb-3">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                              Denial Reason
-                            </h4>
-                            <p className="text-gray-700">{`“${caseItem.parsedData.denialReason}”`}</p>
-                          </div>
-                        )}
+                        <p className="text-gray-600 mb-2">
+                          {caseItem.insuranceCompany}
+                        </p>
                         <p className="text-gray-500 mb-3">
                           Created{" "}
                           {new Date(caseItem.dateCreated).toLocaleDateString()}
@@ -318,17 +313,12 @@ export function MyCases({
                           <FileText className="w-8 h-8 text-gray-400" />
                           <Badge className="bg-green-600">Resolved</Badge>
                         </div>
-                        <h3 className="text-gray-900 mb-2">
-                          {caseItem.insuranceCompany}
+                        <h3 className="text-gray-900 font-bold mb-3 text-lg">
+                          {caseItem.parsedData?.denialReason || "Processing..."}
                         </h3>
-                        {caseItem.parsedData?.denialReason && (
-                          <div className="mb-3">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                              Denial Reason
-                            </h4>
-                            <p className="text-gray-700">{`“${caseItem.parsedData.denialReason}”`}</p>
-                          </div>
-                        )}
+                        <p className="text-gray-600 mb-2">
+                          {caseItem.insuranceCompany}
+                        </p>
                         <p className="text-gray-500 mb-1">
                           Created{" "}
                           {new Date(caseItem.dateCreated).toLocaleDateString()}
