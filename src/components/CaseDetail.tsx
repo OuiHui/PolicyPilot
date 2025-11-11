@@ -153,9 +153,12 @@ export function CaseDetail({
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {caseItem.insuranceCompany}
               </h1>
+              <p className="text-lg text-gray-700 mb-2 font-medium">
+                {caseItem.denialReasonTitle}
+              </p>
               <div className="flex items-center gap-4 text-gray-600">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
@@ -419,29 +422,26 @@ export function CaseDetail({
       </div>
       {/* Email Preview Dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{selectedEmail?.subject}</DialogTitle>
-          </DialogHeader>
-          <DialogDescription>
-            <p className="text-sm text-gray-500">
+            <DialogDescription>
               {selectedEmail
                 ? selectedEmail.type === "sent"
                   ? `To: ${selectedEmail.to}`
                   : `From: ${selectedEmail.from}`
                 : ""}
-            </p>
-            <p className="text-gray-500 text-xs mt-2">
+              {" • "}
               {selectedEmail
                 ? new Date(selectedEmail.date).toLocaleString()
                 : ""}
-            </p>
-            <div className="mt-4">
-              <p className="whitespace-pre-wrap text-gray-700">
-                {selectedEmail?.body}
-              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 max-h-[60vh] overflow-y-auto">
+            <div className="whitespace-pre-line text-gray-700 bg-gray-50 p-4 rounded-lg">
+              {selectedEmail?.body}
             </div>
-          </DialogDescription>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
               Close
@@ -489,6 +489,57 @@ export function CaseDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => setFileDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Case?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this case and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resolve Case Dialog */}
+      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Case</DialogTitle>
+            <DialogDescription>
+              Mark this case as resolved and optionally provide feedback about your experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="feedback">Feedback (Optional)</Label>
+              <Textarea
+                id="feedback"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="How did your appeal go? Any insights to share?"
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmResolve}>
+              Mark as Resolved
             </Button>
           </DialogFooter>
         </DialogContent>

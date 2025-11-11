@@ -95,9 +95,12 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                       <Badge variant="destructive">New</Badge>
                     )}
                   </div>
-                  <h3 className="text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {caseItem.insuranceCompany}
                   </h3>
+                  <p className="text-sm text-gray-700 mb-2 font-medium">
+                    {caseItem.denialReasonTitle}
+                  </p>
                   <p className="text-gray-500 mb-3">
                     {new Date(caseItem.dateCreated).toLocaleDateString()}
                   </p>
