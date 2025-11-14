@@ -57,7 +57,8 @@ export function CaseDetail({
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-  const getStatusText = (status: Case["status"]) => {
+  const getStatusText = (status: Case['status'], resolved?: boolean) => {
+    if (resolved) return 'Resolved';
     switch (status) {
       case "uploading":
         return "Uploading";
@@ -176,9 +177,7 @@ export function CaseDetail({
               {caseItem.resolved ? (
                 <Badge className="bg-green-600">Resolved</Badge>
               ) : (
-                <Badge className="bg-blue-600">
-                  {getStatusText(caseItem.status)}
-                </Badge>
+                <Badge className="bg-blue-600">{getStatusText(caseItem.status, caseItem.resolved)}</Badge>
               )}
             </div>
           </div>
@@ -420,79 +419,6 @@ export function CaseDetail({
           )}
         </div>
       </div>
-      {/* Email Preview Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{selectedEmail?.subject}</DialogTitle>
-            <DialogDescription>
-              {selectedEmail
-                ? selectedEmail.type === "sent"
-                  ? `To: ${selectedEmail.to}`
-                  : `From: ${selectedEmail.from}`
-                : ""}
-              {" • "}
-              {selectedEmail
-                ? new Date(selectedEmail.date).toLocaleString()
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 max-h-[60vh] overflow-y-auto">
-            <div className="whitespace-pre-line text-gray-700 bg-gray-50 p-4 rounded-lg">
-              {selectedEmail?.body}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* File Preview / Download Dialog */}
-      <Dialog
-        open={fileDialogOpen}
-        onOpenChange={(open: boolean | ((prevState: boolean) => boolean)) => {
-          setFileDialogOpen(open);
-          if (!open && selectedFileUrl) {
-            URL.revokeObjectURL(selectedFileUrl);
-            setSelectedFileUrl(null);
-            setSelectedFileName(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedFileName}</DialogTitle>
-          </DialogHeader>
-          <DialogDescription>
-            {selectedFileUrl ? (
-              <div className="space-y-4">
-                <iframe
-                  src={selectedFileUrl}
-                  className="w-full h-[60vh] border"
-                  title={selectedFileName || "file preview"}
-                />
-                <a
-                  href={selectedFileUrl}
-                  download={selectedFileName || ""}
-                  className="text-blue-600 underline"
-                >
-                  Download
-                </a>
-              </div>
-            ) : (
-              <p className="text-gray-700">No file selected</p>
-            )}
-          </DialogDescription>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFileDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -542,6 +468,85 @@ export function CaseDetail({
               Mark as Resolved
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-3xl h-[90vh] p-0 flex flex-col gap-0">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <DialogHeader>
+              <DialogTitle>{selectedEmail?.subject}</DialogTitle>
+              <DialogDescription>
+                {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'} on {selectedEmail && new Date(selectedEmail.date).toLocaleString()}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-4 pb-4 border-b">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      {selectedEmail?.type === 'sent' ? 'To' : 'From'}
+                    </p>
+                    <p className="text-gray-900">
+                      {selectedEmail?.type === 'sent' ? selectedEmail.to : selectedEmail?.from}
+                    </p>
+                  </div>
+                  <Badge variant={selectedEmail?.type === 'sent' ? 'default' : 'secondary'}>
+                    {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'}
+                  </Badge>
+                </div>
+                
+                <div className="prose max-w-none">
+                  <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    {selectedEmail?.body}
+                  </div>
+                </div>
+              </div>
+
+              {selectedEmail && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">AI Analysis</h4>
+                  <div className="space-y-2">
+                    {getEmailComments(selectedEmail).map((comment, index) => (
+                      <div 
+                        key={index} 
+                        className={`p-3 rounded-lg ${
+                          comment.type === 'positive' 
+                            ? 'bg-green-50 border border-green-200' 
+                            : comment.type === 'concern'
+                            ? 'bg-red-50 border border-red-200'
+                            : 'bg-blue-50 border border-blue-200'
+                        }`}
+                      >
+                        <p className={`text-sm font-medium mb-1 ${
+                          comment.type === 'positive' 
+                            ? 'text-green-800' 
+                            : comment.type === 'concern'
+                            ? 'text-red-800'
+                            : 'text-blue-800'
+                        }`}>
+                          {comment.type === 'positive' ? '✓ Strength' : comment.type === 'concern' ? '⚠ Concern' : '💡 Suggestion'}
+                        </p>
+                        <p className="text-sm text-gray-700">{comment.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 px-6 pb-6 pt-4 border-t">
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
