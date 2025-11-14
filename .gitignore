@@ -3,3 +3,5 @@ build
 dist
 .vercel
 *.log
+.env
+.env.*
