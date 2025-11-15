@@ -168,6 +168,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Welcome Section */}
         <div className="mb-12">
           <div className="text-4xl font-bold text-gray-900 mb-4">
             Challenge Your Insurance Denial with Confidence
@@ -182,7 +183,8 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
           </Button>
         </div>
 
-        <div className="mb-12">
+        {/* Member Overview */}
+          <div className="mb-12">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-600" />
@@ -258,9 +260,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                 No members found yet. Use Supabase or add sample entries above.
               </p>
             </Card>
-          )}
-
-          <div className="grid gap-5 lg:grid-cols-2">
+          )}          <div className="grid gap-5 lg:grid-cols-2">
             {memberRecords.map((member) => {
               const isEditing = editingMember === member.email;
               const localUser = dataset.users.find((u) => u.email === member.email);
@@ -587,6 +587,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
           </div>
         </div>
 
+        {/* Plan Coverage */}
         {(planRecords.length > 0 || (usingLocalData && showAddPlan)) && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-4">
@@ -757,6 +758,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
           </div>
         )}
 
+        {/* Recent Cases */}
         {recentCases.length > 0 && (
           <div className="mb-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">Recent Cases</h2>
@@ -807,6 +809,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
           </div>
         )}
 
+        {/* How It Works Section */}
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">How It Works</h2>
           <div className="grid md:grid-cols-3 gap-6">

@@ -13,11 +13,13 @@ import { ReplyReceived } from './components/ReplyReceived';
 import { FollowupReview } from './components/FollowupReview';
 import { Settings } from './components/Settings';
 import { Sidebar } from './components/Sidebar';
+import { LocalDataManager } from './components/LocalDataManager';
 
 export type Screen = 
   | 'login'
   | 'dashboard' 
   | 'my-cases'
+  | 'data-manager'
   | 'case-detail'
   | 'denial-upload'
   | 'policy-upload'
@@ -234,6 +236,8 @@ export default function App() {
         return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
       case 'my-cases':
         return <MyCases cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onStartNew={handleStartNewAppeal} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
+      case 'data-manager':
+        return <LocalDataManager />;
       case 'case-detail':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <CaseDetail case={currentCase} onBack={() => setCurrentScreen('my-cases')} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
@@ -253,22 +257,22 @@ export default function App() {
           onBack={() => setCurrentScreen('denial-upload')} 
         />;
       case 'extracted-info':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <ExtractedInfo data={currentCase.parsedData} onSave={handleExtractedInfoSave} onBack={() => setCurrentScreen('policy-upload')} />;
       case 'strategy':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <AppealStrategy parsedData={currentCase.parsedData} onDraftEmail={handleDraftEmail} onBack={() => setCurrentScreen('extracted-info')} />;
       case 'email-review':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
       case 'email-sent':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailSent case={currentCase} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} />;
       case 'reply-received':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <ReplyReceived case={currentCase} onDraftFollowup={() => setCurrentScreen('followup-review')} onBack={() => setCurrentScreen('email-sent')} />;
       case 'followup-review':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <FollowupReview userEmail={userEmail} onSend={handleSendEmail} onBack={() => setCurrentScreen('reply-received')} />;
       case 'settings':
         return <Settings userEmail={userEmail} onLogout={handleLogout} />;

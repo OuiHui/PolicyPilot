@@ -1,4 +1,4 @@
-import { FolderOpen, Shield, Home, User } from 'lucide-react';
+import { FolderOpen, Shield, Home, User, Database } from 'lucide-react';
 import type { Screen } from '../App';
 
 type SidebarProps = {
@@ -10,6 +10,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const menuItems = [
     { icon: Home, label: 'Dashboard', screen: 'dashboard' as Screen },
     { icon: FolderOpen, label: 'My Cases', screen: 'my-cases' as Screen },
+    { icon: Database, label: 'Local Data', screen: 'data-manager' as Screen },
     { icon: User, label: 'Settings', screen: 'settings' as Screen }
   ];
 

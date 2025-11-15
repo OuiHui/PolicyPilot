@@ -29,6 +29,16 @@ Run `npm run dev` to start the development server.
   - `insurance_cases` plus `case_documents` for provider uploads
   - A convenience view `plan_member_snapshot` that surfaces members, cases, and policy docs per plan
 
+3. Smoke-test the schema directly from `psql` (helps confirm migrations on Supabase):
+
+  ```pwsh
+  psql "$env:DATABASE_URL" -c "\dt"
+  psql "$env:DATABASE_URL" -c "SELECT plan_name, insurance_name FROM insurance_plans LIMIT 5;"
+  psql "$env:DATABASE_URL" -c "SELECT * FROM plan_member_snapshot LIMIT 5;"
+  ```
+
+  You should see the new tables listed, and the final query should return one row per plan with aggregated members/cases. Add seed data with regular `INSERT` commands to exercise the relationships before pointing the UI at Supabase.
+
 3. Use the shared Supabase client in `src/utils/supabase/client.ts` to read/write data inside the app:
 
   ```ts
