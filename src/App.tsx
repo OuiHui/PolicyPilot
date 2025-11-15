@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
+import { HIPAAConsent } from './components/HIPAAConsent';
 import { MyCases } from './components/MyCases';
 import { CaseDetail } from './components/CaseDetail';
 import { DenialUpload } from './components/DenialUpload';
@@ -17,6 +18,7 @@ import { LocalDataManager } from './components/LocalDataManager';
 
 export type Screen = 
   | 'login'
+  | 'hipaa-consent'
   | 'dashboard' 
   | 'my-cases'
   | 'data-manager'
@@ -72,6 +74,7 @@ export type EmailMessage = {
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasAcceptedHIPAA, setHasAcceptedHIPAA] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [cases, setCases] = useState<Case[]>([]);
   const [currentCaseId, setCurrentCaseId] = useState<string | null>(null);
@@ -81,6 +84,11 @@ export default function App() {
   const handleLogin = (email: string) => {
     setUserEmail(email);
     setIsLoggedIn(true);
+    setCurrentScreen('hipaa-consent');
+  };
+
+  const handleHIPAAAccept = () => {
+    setHasAcceptedHIPAA(true);
     setCurrentScreen('dashboard');
   };
 
@@ -220,6 +228,7 @@ export default function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setHasAcceptedHIPAA(false);
     setUserEmail('');
     setCases([]);
     setCurrentCaseId(null);
@@ -232,6 +241,8 @@ export default function App() {
     switch (currentScreen) {
       case 'login':
         return <Login onLogin={handleLogin} />;
+      case 'hipaa-consent':
+        return <HIPAAConsent onAccept={handleHIPAAAccept} />;
       case 'dashboard':
         return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
       case 'my-cases':
@@ -281,16 +292,20 @@ export default function App() {
     }
   };
 
+  // When not logged in or hasn't accepted HIPAA, render screen directly without sidebar
+  if (!isLoggedIn || !hasAcceptedHIPAA) {
+    return renderScreen();
+  }
+
+  // When logged in and HIPAA accepted, render with sidebar and flex layout
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {isLoggedIn && (
-        <Sidebar 
-          currentScreen={currentScreen} 
-          currentCase={getCurrentCase()}
-          onNavigate={setCurrentScreen}
-          onResumeCase={handleResumeCase}
-        />
-      )}
+      <Sidebar 
+        currentScreen={currentScreen} 
+        currentCase={getCurrentCase()}
+        onNavigate={setCurrentScreen}
+        onResumeCase={handleResumeCase}
+      />
       <div className="flex-1">
         {renderScreen()}
       </div>
