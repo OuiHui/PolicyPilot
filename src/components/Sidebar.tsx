@@ -1,4 +1,4 @@
-import { FolderOpen, Shield, Home, User } from 'lucide-react';
+import { FolderOpen, Shield, Home, User, Building2 } from 'lucide-react';
 import type { Screen } from '../App';
 
 type SidebarProps = {
@@ -10,6 +10,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const menuItems = [
     { icon: Home, label: 'Dashboard', screen: 'dashboard' as Screen },
     { icon: FolderOpen, label: 'My Cases', screen: 'my-cases' as Screen },
+    { icon: Building2, label: 'Insurance Plans', screen: 'insurance-plans' as Screen },
     { icon: User, label: 'Settings', screen: 'settings' as Screen }
   ];
 
@@ -18,7 +19,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <Shield className="w-8 h-8 text-blue-600" />
-          <span className="text-gray-900">PolicyPilot</span>
+          <span className="text-xl font-semibold text-gray-900">PolicyPilot</span>
         </div>
       </div>
       
@@ -37,7 +38,7 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
                 `}
               >
                 <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className="font-medium">{item.label}</span>
               </button>
             );
           })}
@@ -48,8 +49,8 @@ export function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
         <div className="flex items-center gap-2 px-4 py-3 bg-green-50 rounded-lg">
           <Shield className="w-5 h-5 text-green-600" />
           <div>
-            <p className="text-green-900">HIPAA Compliant</p>
-            <p className="text-green-700">Your data is secure</p>
+            <p className="text-sm font-semibold text-green-900">HIPAA Compliant</p>
+            <p className="text-xs text-green-700">Your data is secure</p>
           </div>
         </div>
       </div>

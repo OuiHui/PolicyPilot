@@ -123,9 +123,16 @@ Sincerely,
     });
   };
 
+  const progressSteps = [
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProgressBar currentStep={2} />
+      <ProgressBar currentStep={2} steps={progressSteps} />
       
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-8">

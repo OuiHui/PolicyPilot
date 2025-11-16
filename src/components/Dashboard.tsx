@@ -36,7 +36,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
   const recentCases = cases.slice(-3).reverse();
 
   const isIncomplete = (caseItem: Case) => {
-    return ['denial-upload', 'policy-upload', 'extracted-info', 'strategy', 'email-review'].includes(caseItem.currentStep);
+    return ['denial-upload', 'denial-extracted-info', 'strategy', 'email-review'].includes(caseItem.currentStep);
   };
 
   const getStatusText = (status: Case['status']) => {
@@ -69,7 +69,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
           <div className="text-4xl font-bold text-gray-900 mb-4">
             Challenge Your Insurance Denial with Confidence
           </div>
-          <p className="text-gray-600 mb-6 max-w-2xl">
+          <p className="text-xl text-gray-600 mb-6 max-w-2xl">
             Navigate the complex appeals process with AI-powered guidance. We analyze your denial, 
             find conflicting policy provisions, and help you craft compelling appeals.
           </p>
@@ -96,12 +96,9 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {caseItem.insuranceCompany}
-                  </h3>
-                  <p className="text-sm text-gray-700 mb-2 font-medium">
                     {caseItem.denialReasonTitle}
-                  </p>
-                  <p className="text-gray-500 mb-3">
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-3">
                     {new Date(caseItem.dateCreated).toLocaleDateString()}
                   </p>
                   <Badge className={getStatusColor(caseItem.status) + " mb-3"}>
@@ -141,13 +138,13 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                     <Icon className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="mb-2 text-blue-600">
+                  <div className="text-sm font-semibold mb-2 text-blue-600">
                     Step {step.number}
                   </div>
-                  <h3 className="text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {step.title}
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600">
                     {step.description}
                   </p>
                 </Card>

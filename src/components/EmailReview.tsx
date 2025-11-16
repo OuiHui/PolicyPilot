@@ -29,6 +29,13 @@ export function EmailReview({ userEmail, parsedData, onSend, onBack }: EmailRevi
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [to, setTo] = useState('claims@' + parsedData.insurer.toLowerCase().replace(/\s+/g, '') + '.com');
   const [subject, setSubject] = useState(`Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
+  
+  const progressSteps = [
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
+  ];
   const [body, setBody] = useState(
     `Dear ${parsedData.insurer} Claims Department,
 
@@ -69,7 +76,7 @@ Sincerely,
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProgressBar currentStep={3} />
+      <ProgressBar currentStep={3} steps={progressSteps} />
       
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
