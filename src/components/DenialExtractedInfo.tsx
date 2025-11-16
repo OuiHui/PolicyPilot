@@ -35,15 +35,15 @@ export function DenialExtractedInfo({
   };
 
   const progressSteps = [
-    "Select Plan & Person",
-    "Upload Denial",
-    "Review & Strategy",
-    "Send Appeal",
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProgressBar currentStep={2} steps={progressSteps} />
+      <ProgressBar currentStep={1} steps={progressSteps} />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">

@@ -86,9 +86,8 @@ export function InsurancePlanPolicyUpload({
 
   const progressSteps = [
     "Upload Documents",
-    "Review Plan Information",
-    "Covered Individuals",
-    "Review & Confirm",
+    "Add Individuals",
+    "Confirm",
   ];
 
   return (

@@ -58,14 +58,13 @@ export function AddInsurancePlanCoverage({
 
   const progressSteps = [
     "Upload Documents",
-    "Review Plan Information",
-    "Covered Individuals",
-    "Review & Confirm",
+    "Add Individuals",
+    "Confirm",
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProgressBar currentStep={2} steps={progressSteps} />
+      <ProgressBar currentStep={1} steps={progressSteps} />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">

@@ -31,10 +31,10 @@ export function EmailReview({ userEmail, parsedData, onSend, onBack }: EmailRevi
   const [subject, setSubject] = useState(`Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
   
   const progressSteps = [
-    "Select Plan & Person",
-    "Upload Denial",
-    "Review & Strategy",
-    "Send Appeal",
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
   ];
   const [body, setBody] = useState(
     `Dear ${parsedData.insurer} Claims Department,

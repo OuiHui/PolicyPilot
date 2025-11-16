@@ -124,10 +124,10 @@ Sincerely,
   };
 
   const progressSteps = [
-    "Select Plan & Person",
-    "Upload Denial",
-    "Review & Strategy",
-    "Send Appeal",
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
   ];
 
   return (

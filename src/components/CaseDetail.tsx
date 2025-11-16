@@ -8,6 +8,8 @@ import {
   Trash2,
   CheckCircle2,
   Eye,
+  Building2,
+  Users,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -34,25 +36,28 @@ import {
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import type { Case, EmailMessage } from "../App";
+import type { InsurancePlan } from "./InsurancePlans";
 
 type CaseDetailProps = {
   case: Case;
+  plan?: InsurancePlan;
   onBack: () => void;
   onDeleteCase: (caseId: string) => void;
   onResolveCase: (caseId: string, feedback?: string) => void;
+  onViewEmailThread: () => void;
 };
 
 export function CaseDetail({
   case: caseItem,
+  plan,
   onBack,
   onDeleteCase,
   onResolveCase,
+  onViewEmailThread,
 }: CaseDetailProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -97,50 +102,11 @@ export function CaseDetail({
     setFeedback("");
   };
 
-  const handleViewEmail = (email: EmailMessage) => {
-    setSelectedEmail(email);
-    setEmailDialogOpen(true);
-  };
-
   const handleViewFile = (file: File) => {
     const url = URL.createObjectURL(file);
     setSelectedFileUrl(url);
     setSelectedFileName(file.name);
     setFileDialogOpen(true);
-  };
-
-  const getEmailComments = (email: EmailMessage) => {
-    if (email.type === "sent") {
-      return [
-        {
-          type: "positive",
-          text: "Strong opening that establishes the purpose clearly",
-        },
-        {
-          type: "positive",
-          text: "Effective use of policy language to support your argument",
-        },
-        {
-          type: "suggestion",
-          text: "Consider adding specific dates for stronger documentation",
-        },
-      ];
-    } else {
-      return [
-        {
-          type: "concern",
-          text: "Response uses generic language without addressing specific policy sections",
-        },
-        {
-          type: "opportunity",
-          text: "They haven't addressed your physician's documentation - highlight this in follow-up",
-        },
-        {
-          type: "positive",
-          text: "They acknowledge receipt and timeline, which is procedurally important",
-        },
-      ];
-    }
   };
 
   return (
@@ -155,7 +121,7 @@ export function CaseDetail({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {caseItem.insuranceCompany}
+                {caseItem.parsedData?.insurer || "Insurance Company"}
               </h1>
               <p className="text-lg text-gray-700 mb-2 font-medium">
                 {caseItem.denialReasonTitle}
@@ -177,7 +143,9 @@ export function CaseDetail({
               {caseItem.resolved ? (
                 <Badge className="bg-green-600">Resolved</Badge>
               ) : (
-                <Badge className="bg-blue-600">{getStatusText(caseItem.status, caseItem.resolved)}</Badge>
+                <Badge className="bg-blue-600">
+                  {getStatusText(caseItem.status, caseItem.resolved)}
+                </Badge>
               )}
             </div>
           </div>
@@ -201,6 +169,59 @@ export function CaseDetail({
         </div>
 
         <div className="space-y-6">
+          {/* Insurance Plan Information */}
+          {plan && (
+            <Card className="p-6">
+              <h2 className="text-gray-900 mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                Insurance Plan
+              </h2>
+              <div className="space-y-3">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-500">Plan Name</p>
+                    <p className="text-gray-900">{plan.planName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Insurance Company</p>
+                    <p className="text-gray-900">{plan.insuranceCompany}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Policy Number</p>
+                    <p className="text-gray-900">{plan.policyNumber}</p>
+                  </div>
+                  {plan.groupNumber && (
+                    <div>
+                      <p className="text-gray-500">Group Number</p>
+                      <p className="text-gray-900">{plan.groupNumber}</p>
+                    </div>
+                  )}
+                </div>
+                {caseItem.coveredPersonId && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-gray-500 mb-2 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Covered Individual for this case
+                    </p>
+                    <p className="text-gray-900">
+                      {plan.coveredIndividuals.find(
+                        (p) => p.id === caseItem.coveredPersonId
+                      )?.name || "Unknown"}
+                      {plan.coveredIndividuals.find(
+                        (p) => p.id === caseItem.coveredPersonId
+                      )?.relationship &&
+                        ` (${
+                          plan.coveredIndividuals.find(
+                            (p) => p.id === caseItem.coveredPersonId
+                          )?.relationship
+                        })`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Uploaded Documents */}
           <Card className="p-6">
             <h2 className="text-gray-900 mb-4">Uploaded Documents</h2>
@@ -236,44 +257,7 @@ export function CaseDetail({
                 ))}
               </div>
 
-              {caseItem.policyFiles.length > 0 && (
-                <div>
-                  <p className="text-gray-700 mb-2">
-                    Policy Documents (
-                    {caseItem.policyType === "comprehensive"
-                      ? "Comprehensive"
-                      : "Supplementary"}
-                    )
-                  </p>
-                  {caseItem.policyFiles.map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-600" />
-                        <span className="text-gray-900">{file.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewFile(file)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewFile(file)}
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Policy documents now live on the InsurancePlan, so we don't show them from the Case anymore */}
             </div>
           </Card>
 
@@ -363,57 +347,33 @@ export function CaseDetail({
           </Card>
 
           {/* Email Thread */}
-
-          {/* Email Thread */}
           {caseItem.emailThread.length > 0 && (
             <Card className="p-6">
-              <h2 className="text-gray-900 mb-4">Email Thread</h2>
-              <div className="space-y-4">
-                {caseItem.emailThread.map((email, index) => (
-                  <div key={email.id}>
-                    {index > 0 && <Separator className="my-4" />}
-                    <div className="flex items-start gap-3">
-                      <Mail
-                        className={`w-5 h-5 flex-shrink-0 mt-1 ${
-                          email.type === "sent"
-                            ? "text-blue-600"
-                            : "text-green-600"
-                        }`}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="text-gray-900">{email.subject}</p>
-                            <p className="text-gray-500">
-                              {email.type === "sent" ? "To" : "From"}:{" "}
-                              {email.type === "sent" ? email.to : email.from}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant={
-                                email.type === "sent" ? "default" : "secondary"
-                              }
-                            >
-                              {email.type === "sent" ? "Sent" : "Received"}
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewEmail(email)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-gray-600">
-                          {new Date(email.date).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-gray-900 mb-1">Email Communication</h2>
+                  <p className="text-sm text-gray-600">
+                    {caseItem.emailThread.length} {caseItem.emailThread.length === 1 ? 'message' : 'messages'} in thread
+                  </p>
+                </div>
+                <Button onClick={onViewEmailThread} size="lg">
+                  <Mail className="w-5 h-5 mr-2" />
+                  View Email Thread
+                </Button>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-gray-900 font-medium mb-1">
+                      Latest: {caseItem.emailThread[caseItem.emailThread.length - 1].subject}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {caseItem.emailThread[caseItem.emailThread.length - 1].type === 'sent' ? 'Sent' : 'Received'} on{' '}
+                      {new Date(caseItem.emailThread[caseItem.emailThread.length - 1].date).toLocaleDateString()}
+                    </p>
                   </div>
-                ))}
+                </div>
               </div>
             </Card>
           )}
@@ -471,84 +431,6 @@ export function CaseDetail({
         </DialogContent>
       </Dialog>
 
-      {/* View Email Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="max-w-3xl h-[90vh] p-0 flex flex-col gap-0">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <DialogHeader>
-              <DialogTitle>{selectedEmail?.subject}</DialogTitle>
-              <DialogDescription>
-                {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'} on {selectedEmail && new Date(selectedEmail.date).toLocaleString()}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      {selectedEmail?.type === 'sent' ? 'To' : 'From'}
-                    </p>
-                    <p className="text-gray-900">
-                      {selectedEmail?.type === 'sent' ? selectedEmail.to : selectedEmail?.from}
-                    </p>
-                  </div>
-                  <Badge variant={selectedEmail?.type === 'sent' ? 'default' : 'secondary'}>
-                    {selectedEmail?.type === 'sent' ? 'Sent' : 'Received'}
-                  </Badge>
-                </div>
-                
-                <div className="prose max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {selectedEmail?.body}
-                  </div>
-                </div>
-              </div>
-
-              {selectedEmail && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">AI Analysis</h4>
-                  <div className="space-y-2">
-                    {getEmailComments(selectedEmail).map((comment, index) => (
-                      <div 
-                        key={index} 
-                        className={`p-3 rounded-lg ${
-                          comment.type === 'positive' 
-                            ? 'bg-green-50 border border-green-200' 
-                            : comment.type === 'concern'
-                            ? 'bg-red-50 border border-red-200'
-                            : 'bg-blue-50 border border-blue-200'
-                        }`}
-                      >
-                        <p className={`text-sm font-medium mb-1 ${
-                          comment.type === 'positive' 
-                            ? 'text-green-800' 
-                            : comment.type === 'concern'
-                            ? 'text-red-800'
-                            : 'text-blue-800'
-                        }`}>
-                          {comment.type === 'positive' ? '✓ Strength' : comment.type === 'concern' ? '⚠ Concern' : '💡 Suggestion'}
-                        </p>
-                        <p className="text-sm text-gray-700">{comment.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex-shrink-0 px-6 pb-6 pt-4 border-t">
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -22,10 +22,10 @@ export function SelectPlanForAppeal({ plans, onContinue, onCancel, onAddPlan }: 
   const canProceed = selectedPlanId && selectedPersonId;
 
   const progressSteps = [
-    "Select Plan & Person",
-    "Upload Denial",
-    "Review & Strategy",
-    "Send Appeal",
+    "Choose Plan",
+    "Upload Documents",
+    "Strategy",
+    "Send",
   ];
 
   return (

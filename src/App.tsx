@@ -19,6 +19,8 @@ import { AddInsurancePlanCoverage } from './components/AddInsurancePlanCoverage'
 import { AddInsurancePlanReview } from './components/AddInsurancePlanReview';
 import { SelectPlanForAppeal } from './components/SelectPlanForAppeal';
 import { DenialExtractedInfo, type DenialParsedData } from './components/DenialExtractedInfo';
+import { EmailThread } from './components/EmailThread';
+import { EditInsurancePlan } from './components/EditInsurancePlan';
 
 export type Screen = 
   | 'login'
@@ -26,6 +28,7 @@ export type Screen =
   | 'dashboard' 
   | 'my-cases'
   | 'insurance-plans'
+  | 'edit-insurance-plan'
   | 'add-insurance-plan-upload'
   | 'add-insurance-plan-extracted'
   | 'add-insurance-plan-coverage'
@@ -34,6 +37,7 @@ export type Screen =
   | 'denial-upload'
   | 'denial-extracted-info'
   | 'case-detail'
+  | 'email-thread'
   | 'strategy' 
   | 'email-review' 
   | 'email-sent' 
@@ -86,6 +90,7 @@ export default function App() {
   const [cases, setCases] = useState<Case[]>([]);
   const [currentCaseId, setCurrentCaseId] = useState<string | null>(null);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   
   // Draft state for insurance plan creation
   const [planDraft, setPlanDraft] = useState<{
@@ -196,8 +201,16 @@ export default function App() {
   };
 
   const handleEditPlan = (planId: string) => {
-    // TODO: Implement edit functionality
-    console.log('Edit plan:', planId);
+    setCurrentPlanId(planId);
+    setCurrentScreen('edit-insurance-plan');
+  };
+
+  const handleSaveEditedPlan = (updatedPlan: InsurancePlan) => {
+    setInsurancePlans(insurancePlans.map(p => 
+      p.id === updatedPlan.id ? updatedPlan : p
+    ));
+    setCurrentPlanId(null);
+    setCurrentScreen('insurance-plans');
   };
 
   const handleDenialUploadComplete = (files: File[]) => {
@@ -287,6 +300,10 @@ export default function App() {
     setCurrentScreen('case-detail');
   };
 
+  const handleViewEmailThread = () => {
+    setCurrentScreen('email-thread');
+  };
+
   const handleResumeCase = (caseId: string) => {
     const caseToResume = cases.find(c => c.id === caseId);
     if (!caseToResume) return;
@@ -318,6 +335,7 @@ export default function App() {
     setCases([]);
     setCurrentCaseId(null);
     setInsurancePlans([]);
+    setCurrentPlanId(null);
     setPlanDraft(null);
     setCurrentScreen('login');
   };
@@ -341,6 +359,18 @@ export default function App() {
           plans={insurancePlans} 
           onAddPlan={() => handleAddInsurancePlan(false)}
           onEditPlan={handleEditPlan}
+        />;
+      
+      case 'edit-insurance-plan':
+        const planToEdit = insurancePlans.find(p => p.id === currentPlanId);
+        if (!planToEdit) {
+          setCurrentScreen('insurance-plans');
+          return null;
+        }
+        return <EditInsurancePlan
+          plan={planToEdit}
+          onSave={handleSaveEditedPlan}
+          onBack={() => setCurrentScreen('insurance-plans')}
         />;
       case 'add-insurance-plan-upload':
         return <InsurancePlanPolicyUpload 
@@ -392,7 +422,16 @@ export default function App() {
           plan={casePlan}
           onBack={() => setCurrentScreen('my-cases')} 
           onDeleteCase={handleDeleteCase} 
-          onResolveCase={handleResolveCase} 
+          onResolveCase={handleResolveCase}
+          onViewEmailThread={handleViewEmailThread}
+        />;
+      
+      case 'email-thread':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <EmailThread
+          emailThread={currentCase.emailThread}
+          userEmail={userEmail}
+          onBack={() => setCurrentScreen('case-detail')}
         />;
       
       // Appeal Creation Flow

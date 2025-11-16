@@ -51,8 +51,7 @@ export function MyCases({
   const isIncomplete = (caseItem: Case) => {
     return [
       "denial-upload",
-      "policy-upload",
-      "extracted-info",
+      "denial-extracted-info",
       "strategy",
       "email-review",
     ].includes(caseItem.currentStep);
@@ -92,10 +91,8 @@ export function MyCases({
     switch (step) {
       case "denial-upload":
         return "Uploading Denial Documents";
-      case "policy-upload":
-        return "Uploading Policy Documents";
-      case "extracted-info":
-        return "Reviewing Extracted Info";
+      case "denial-extracted-info":
+        return "Reviewing Denial Information";
       case "strategy":
         return "Reviewing Strategy";
       case "email-review":
@@ -228,7 +225,7 @@ export function MyCases({
                         )}
                       </div>
                       <h3 className="text-gray-900 mb-2">
-                        {caseItem.insuranceCompany}
+                        {caseItem.parsedData?.insurer || "Insurance Company"}
                       </h3>
                       <p className="text-sm text-gray-600 mb-3 font-medium">
                         {caseItem.denialReasonTitle}
@@ -310,7 +307,7 @@ export function MyCases({
                         <Badge className="bg-green-600">Resolved</Badge>
                       </div>
                       <h3 className="text-gray-900 mb-2">
-                        {caseItem.insuranceCompany}
+                        {caseItem.parsedData?.insurer || "Insurance Company"}
                       </h3>
                       <p className="text-sm text-gray-600 mb-3 font-medium">
                         {caseItem.denialReasonTitle}
