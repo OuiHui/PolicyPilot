@@ -65,9 +65,16 @@ export function DenialUpload({
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const progressSteps = [
+    "Select Plan & Person",
+    "Upload Denial",
+    "Review & Strategy",
+    "Send Appeal",
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProgressBar currentStep={1} />
+      <ProgressBar currentStep={1} steps={progressSteps} />
 
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
@@ -182,7 +189,7 @@ export function DenialUpload({
             size="lg"
             className="px-8"
           >
-            Continue to Policy Documents
+            Continue
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </div>
