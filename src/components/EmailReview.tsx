@@ -97,15 +97,17 @@ Sincerely,
             <div>
               <Label className="text-gray-700 mb-2 block">From</Label>
               <div className="relative">
-                <Input
-                  value={userEmail}
-                  disabled
-                  className="w-full bg-gray-100 pr-10"
-                />
-                <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+              <Input
+                id="from"
+                type="email"
+                value="policypilotco@gmail.com"
+                disabled
+                className="w-full bg-gray-100 pr-10"
+              />
+              <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
               <p className="text-gray-500 mt-1">
-                Email will be sent from your connected Gmail account
+              Email will be sent from policypilotco@gmail.com
               </p>
             </div>
 

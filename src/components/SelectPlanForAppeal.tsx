@@ -125,29 +125,6 @@ export function SelectPlanForAppeal({ plans, onContinue, onCancel, onAddPlan }: 
                   </p>
                 </div>
               )}
-
-              {/* Summary */}
-              {selectedPlan && selectedPersonId && (
-                <Card className="p-4 bg-blue-50 border-blue-200">
-                  <h3 className="text-blue-900 mb-3">Appeal Summary</h3>
-                  <div className="space-y-2 text-blue-800">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4" />
-                      <span>{selectedPlan.planName} ({selectedPlan.insuranceCompany})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        {selectedPlan.coveredIndividuals.find(p => p.id === selectedPersonId)?.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      <span>Policy: {selectedPlan.policyNumber}</span>
-                    </div>
-                  </div>
-                </Card>
-              )}
             </div>
 
             <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">

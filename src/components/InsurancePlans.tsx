@@ -1,13 +1,21 @@
-import { Building2, Users, Plus, Pencil, FileText, Calendar } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Badge } from './ui/badge';
+import {
+  Building2,
+  Users,
+  Plus,
+  Pencil,
+  FileText,
+  Calendar,
+} from "lucide-react";
+import { formatPolicyType } from "../utils/format";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 export type CoveredPerson = {
   id: string;
   name: string;
   dateOfBirth: string;
-  relationship: 'Self' | 'Spouse' | 'Child' | 'Dependent' | 'Other';
+  relationship: "Self" | "Spouse" | "Child" | "Dependent" | "Other";
 };
 
 export type InsurancePlan = {
@@ -16,7 +24,7 @@ export type InsurancePlan = {
   planName: string;
   policyNumber: string;
   groupNumber?: string;
-  policyType: 'comprehensive' | 'supplementary';
+  policyType: "comprehensive" | "supplementary";
   policyFiles: File[];
   coveredIndividuals: CoveredPerson[];
   dateAdded: string;
@@ -28,7 +36,11 @@ type InsurancePlansProps = {
   onEditPlan: (planId: string) => void;
 };
 
-export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansProps) {
+export function InsurancePlans({
+  plans,
+  onAddPlan,
+  onEditPlan,
+}: InsurancePlansProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -58,7 +70,8 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
               No Insurance Plans Yet
             </h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Add your insurance plan information to streamline future appeals. You'll only need to upload your policy documents once.
+              Add your insurance plan information to streamline future appeals.
+              You'll only need to upload your policy documents once.
             </p>
             <Button onClick={onAddPlan} size="lg">
               <Plus className="w-5 h-5 mr-2" />
@@ -68,7 +81,10 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {plans.map((plan) => (
-              <Card key={plan.id} className="p-6 hover:shadow-lg transition-shadow">
+              <Card
+                key={plan.id}
+                className="p-6 hover:shadow-lg transition-shadow"
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -79,8 +95,8 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
                       <p className="text-gray-600">{plan.insuranceCompany}</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => onEditPlan(plan.id)}
                   >
@@ -102,21 +118,27 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
                   <div className="flex items-center gap-2 text-gray-600">
                     <Users className="w-4 h-4" />
                     <span>
-                      {plan.coveredIndividuals.length} covered {plan.coveredIndividuals.length === 1 ? 'individual' : 'individuals'}
+                      {plan.coveredIndividuals.length} covered{" "}
+                      {plan.coveredIndividuals.length === 1
+                        ? "individual"
+                        : "individuals"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-600">
                     <Calendar className="w-4 h-4" />
-                    <span>Added {new Date(plan.dateAdded).toLocaleDateString()}</span>
+                    <span>
+                      Added {new Date(plan.dateAdded).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge variant="outline">
-                    {plan.policyFiles.length} {plan.policyFiles.length === 1 ? 'document' : 'documents'}
+                    {plan.policyFiles.length}{" "}
+                    {plan.policyFiles.length === 1 ? "document" : "documents"}
                   </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    {plan.policyType}
+                  <Badge variant="outline">
+                    {formatPolicyType(plan.policyType)}
                   </Badge>
                 </div>
 
@@ -124,9 +146,14 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
                   <p className="text-gray-500 mb-2">Covered Individuals:</p>
                   <div className="space-y-1">
                     {plan.coveredIndividuals.slice(0, 3).map((person) => (
-                      <div key={person.id} className="flex items-center gap-2 text-gray-600">
+                      <div
+                        key={person.id}
+                        className="flex items-center gap-2 text-gray-600"
+                      >
                         <Users className="w-3 h-3" />
-                        <span>{person.name} ({person.relationship})</span>
+                        <span>
+                          {person.name} ({person.relationship})
+                        </span>
                       </div>
                     ))}
                     {plan.coveredIndividuals.length > 3 && (
@@ -144,4 +171,3 @@ export function InsurancePlans({ plans, onAddPlan, onEditPlan }: InsurancePlansP
     </div>
   );
 }
-

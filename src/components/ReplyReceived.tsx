@@ -247,7 +247,7 @@ ${caseItem.insuranceCompany} Claims Department`,
           </p>
         </Card>
 
-        <div className="flex justify-between">
+        <div className="flex justify-between mb-6">
           <Button variant="outline" onClick={onBack} size="lg">
             <ArrowLeft className="mr-2 w-5 h-5" />
             Back

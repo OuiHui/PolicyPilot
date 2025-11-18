@@ -250,20 +250,28 @@ export function EmailThread({
                                     <h3 className="font-semibold text-gray-900 mb-3">
                                         {email.subject}
                                     </h3>
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        {renderHighlightedEmail(email)}
+                                    <div className="bg-white p-4 rounded-lg border">
+                                        {/* Preserve explicit newlines by splitting body into lines
+                                            and rendering each line (with highlighting) as its own block.
+                                            This ensures \n becomes visible as line breaks. */}
+                                        {email.body.split("\n").map((line, i, arr) =>
+                                            line === "" ? (
+                                                // render empty lines as a visible gap
+                                                <div key={i} className="py-1" />
+                                            ) : (
+                                                <div
+                                                    key={i}
+                                                    className="whitespace-pre-wrap"
+                                                >
+                                                    {renderHighlightedEmail({
+                                                        ...email,
+                                                        body: line,
+                                                    })}
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-
-                            <div className="mt-4 pt-4 border-t border-gray-200">
-                                <p className="text-sm text-gray-500 mb-2">
-                                    💡{" "}
-                                    <span className="font-medium">
-                                        AI Analysis:
-                                    </span>{" "}
-                                    Hover over highlighted text to see insights
-                                </p>
                             </div>
                         </Card>
                     ))}
