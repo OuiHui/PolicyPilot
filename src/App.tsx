@@ -48,9 +48,22 @@ export type Screen =
   | 'followup-review'
   | 'settings';
 
-export type CaseStatus = 'uploading' | 'analyzing' | 'ready-to-send' | 'sent' | 'awaiting-reply' | 'reply-received';
+export type CaseStatus =
+  | "uploading"
+  | "analyzing"
+  | "ready-to-send"
+  | "sent"
+  | "awaiting-reply"
+  | "reply-received";
 
-export type CaseStep = 'denial-upload' | 'denial-extracted-info' | 'strategy' | 'email-review' | 'email-sent' | 'reply-received' | 'followup-review';
+export type CaseStep =
+  | "denial-upload"
+  | "denial-extracted-info"
+  | "strategy"
+  | "email-review"
+  | "email-sent"
+  | "reply-received"
+  | "followup-review";
 
 export type Case = {
   id: string;
@@ -82,11 +95,11 @@ export type EmailMessage = {
   subject: string;
   body: string;
   date: string;
-  type: 'sent' | 'received';
+  type: "sent" | "received";
 };
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+  const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [hasAcceptedHIPAA, setHasAcceptedHIPAA] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -98,14 +111,14 @@ export default function App() {
 
   // Draft state for insurance plan creation
   const [planDraft, setPlanDraft] = useState<{
-    policyType?: 'comprehensive' | 'supplementary';
+    policyType?: "comprehensive" | "supplementary";
     policyFiles?: File[];
     planData?: InsurancePlanParsedData;
     coveredIndividuals?: any[];
     fromAppealFlow?: boolean;
   } | null>(null);
 
-  const getCurrentCase = () => cases.find(c => c.id === currentCaseId);
+  const getCurrentCase = () => cases.find((c) => c.id === currentCaseId);
 
   // Restore session on mount
   useEffect(() => {
@@ -258,7 +271,7 @@ export default function App() {
   };
 
   const handleStartNewAppeal = () => {
-    setCurrentScreen('select-plan-for-appeal');
+    setCurrentScreen("select-plan-for-appeal");
   };
 
   const handleStartNewAppealWithPlan = async (planId: string, coveredPersonId: string) => {
@@ -270,14 +283,14 @@ export default function App() {
       userId: user?._id || "691e93c4fd7adcd73e6f628c",
       planId,
       coveredPersonId,
-      denialReasonTitle: 'Pending Analysis',
+      denialReasonTitle: "Pending Analysis",
       dateCreated: new Date().toISOString(),
-      status: 'uploading',
-      currentStep: 'denial-upload',
+      status: "uploading",
+      currentStep: "denial-upload",
       hasNewEmail: false,
       denialFiles: [],
       parsedData: null,
-      emailThread: []
+      emailThread: [],
     };
 
     try {
@@ -302,7 +315,7 @@ export default function App() {
 
   const handleAddInsurancePlan = (fromAppealFlow = false) => {
     setPlanDraft({ fromAppealFlow });
-    setCurrentScreen('add-insurance-plan-upload');
+    setCurrentScreen("add-insurance-plan-upload");
   };
 
   const handlePlanPolicyUploadComplete = (policyType: 'comprehensive' | 'supplementary', files: File[]) => {
@@ -311,10 +324,10 @@ export default function App() {
     // Simulate document analysis
     setTimeout(() => {
       const extractedData: InsurancePlanParsedData = {
-        insuranceCompany: 'Blue Cross Blue Shield',
-        planName: 'PPO Gold 2024',
-        policyNumber: 'ABC123456',
-        groupNumber: 'GRP789',
+        insuranceCompany: "Blue Cross Blue Shield",
+        planName: "PPO Gold 2024",
+        policyNumber: "ABC123456",
+        groupNumber: "GRP789",
       };
       setPlanDraft(prev => ({ ...prev!, planData: extractedData }));
       setCurrentScreen('add-insurance-plan-extracted');
@@ -434,7 +447,7 @@ export default function App() {
 
   const handleEditPlan = (planId: string) => {
     setCurrentPlanId(planId);
-    setCurrentScreen('edit-insurance-plan');
+    setCurrentScreen("edit-insurance-plan");
   };
 
   const handleSaveEditedPlan = async (updatedPlan: InsurancePlan) => {
@@ -583,12 +596,12 @@ export default function App() {
     const currentCase = getCurrentCase();
     if (!currentCase) return;
 
-    const plan = insurancePlans.find(p => p.id === currentCase.planId);
+    const plan = insurancePlans.find((p) => p.id === currentCase.planId);
 
     const parsedData: ParsedData = {
-      insurer: plan?.insuranceCompany || 'Unknown Insurer',
-      policyNumber: plan?.policyNumber || 'Unknown',
-      denialReason: data.briefDescription
+      insurer: plan?.insuranceCompany || "Unknown Insurer",
+      policyNumber: plan?.policyNumber || "Unknown",
+      denialReason: data.briefDescription,
     };
 
     await updateCaseInDb(currentCaseId, {
@@ -598,7 +611,7 @@ export default function App() {
       status: 'ready-to-send'
     });
 
-    setCurrentScreen('strategy');
+    setCurrentScreen("strategy");
   };
 
   const handleDraftEmail = (draft: { subject: string; body: string }) => {
@@ -629,12 +642,12 @@ export default function App() {
     if (!currentCaseId) return;
     const reply: EmailMessage = {
       id: Date.now().toString(),
-      from: 'claims@healthguard.com',
+      from: "claims@healthguard.com",
       to: userEmail,
-      subject: 'Re: Appeal for Claim Denial',
-      body: 'Insurance company response...',
+      subject: "Re: Appeal for Claim Denial",
+      body: "Insurance company response...",
       date: new Date().toISOString(),
-      type: 'received'
+      type: "received",
     };
     setCases(cases.map(c =>
       c.id === currentCaseId
@@ -646,15 +659,15 @@ export default function App() {
 
   const handleViewCase = (caseId: string) => {
     setCurrentCaseId(caseId);
-    setCurrentScreen('case-detail');
+    setCurrentScreen("case-detail");
   };
 
   const handleViewEmailThread = () => {
-    setCurrentScreen('email-thread');
+    setCurrentScreen("email-thread");
   };
 
   const handleResumeCase = (caseId: string) => {
-    const caseToResume = cases.find(c => c.id === caseId);
+    const caseToResume = cases.find((c) => c.id === caseId);
     if (!caseToResume) return;
 
     setCurrentCaseId(caseId);
@@ -717,21 +730,35 @@ export default function App() {
     setInsurancePlans([]);
     setCurrentPlanId(null);
     setPlanDraft(null);
-    setCurrentScreen('login');
+    setCurrentScreen("login");
   };
 
   const renderScreen = () => {
     const currentCase = getCurrentCase();
 
     switch (currentScreen) {
-      case 'login':
+      case "login":
         return <Login onLogin={handleLogin} />;
-      case 'hipaa-consent':
+      case "hipaa-consent":
         return <HIPAAConsent onAccept={handleHIPAAAccept} />;
       case 'dashboard':
-        return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <Dashboard 
+          onStartNewAppeal={handleStartNewAppeal} 
+          cases={cases} 
+          insurancePlans={insurancePlans}
+          onViewCase={handleViewCase} 
+          onResumeCase={handleResumeCase} 
+        />;
       case 'my-cases':
-        return <MyCases cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onStartNew={handleStartNewAppeal} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
+        return <MyCases 
+          cases={cases} 
+          insurancePlans={insurancePlans}
+          onViewCase={handleViewCase} 
+          onResumeCase={handleResumeCase} 
+          onStartNew={handleStartNewAppeal} 
+          onDeleteCase={handleDeleteCase} 
+          onResolveCase={handleResolveCase} 
+        />;
 
       // Insurance Plans Management
       case 'insurance-plans':
@@ -745,7 +772,7 @@ export default function App() {
       case 'edit-insurance-plan':
         const planToEdit = insurancePlans.find(p => p.id === currentPlanId);
         if (!planToEdit) {
-          setCurrentScreen('insurance-plans');
+          setCurrentScreen("insurance-plans");
           return null;
         }
         return <EditInsurancePlan
@@ -796,7 +823,7 @@ export default function App() {
 
       // Case Details and Management
       case 'case-detail':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         const casePlan = insurancePlans.find(p => p.id === currentCase.planId);
         return <CaseDetail
           case={currentCase}
@@ -808,7 +835,7 @@ export default function App() {
         />;
 
       case 'email-thread':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailThread
           emailThread={currentCase.emailThread}
           userEmail={userEmail}
@@ -817,7 +844,7 @@ export default function App() {
 
       // Appeal Creation Flow
       case 'denial-upload':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <DenialUpload
           initialFiles={currentCase.denialFiles}
           onContinue={handleDenialUploadComplete}
@@ -825,7 +852,7 @@ export default function App() {
           onDelete={() => handleDeleteCase(currentCase.id)}
         />;
       case 'denial-extracted-info':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         const plan = insurancePlans.find(p => p.id === currentCase.planId);
         return <DenialExtractedInfo
           data={{ briefDescription: currentCase.denialReasonTitle }}
@@ -835,19 +862,19 @@ export default function App() {
           onBack={() => setCurrentScreen('denial-upload')}
         />;
       case 'strategy':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <AppealStrategy parsedData={currentCase.parsedData} onDraftEmail={handleDraftEmail} onBack={() => setCurrentScreen('denial-extracted-info')} />;
       case 'email-review':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
       case 'email-sent':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailSent case={currentCase} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} />;
       case 'reply-received':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <ReplyReceived case={currentCase} onDraftFollowup={() => setCurrentScreen('followup-review')} onBack={() => setCurrentScreen('email-sent')} />;
       case 'followup-review':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <FollowupReview userEmail={userEmail} onSend={handleSendEmail} onBack={() => setCurrentScreen('reply-received')} />;
       case 'settings':
         return <Settings userEmail={userEmail} onLogout={handleLogout} />;
