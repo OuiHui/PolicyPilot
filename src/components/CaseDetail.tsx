@@ -62,8 +62,8 @@ export function CaseDetail({
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-  const getStatusText = (status: Case['status'], resolved?: boolean) => {
-    if (resolved) return 'Resolved';
+  const getStatusText = (status: Case["status"], resolved?: boolean) => {
+    if (resolved) return "Resolved";
     switch (status) {
       case "uploading":
         return "Uploading";
@@ -100,6 +100,7 @@ export function CaseDetail({
     onResolveCase(caseItem.id, feedback);
     setResolveDialogOpen(false);
     setFeedback("");
+    onBack();
   };
 
   const handleViewFile = (file: File) => {
@@ -353,7 +354,9 @@ export function CaseDetail({
                 <div>
                   <h2 className="text-gray-900 mb-1">Email Communication</h2>
                   <p className="text-sm text-gray-600">
-                    {caseItem.emailThread.length} {caseItem.emailThread.length === 1 ? 'message' : 'messages'} in thread
+                    {caseItem.emailThread.length}{" "}
+                    {caseItem.emailThread.length === 1 ? "message" : "messages"}{" "}
+                    in thread
                   </p>
                 </div>
                 <Button onClick={onViewEmailThread} size="lg">
@@ -366,11 +369,23 @@ export function CaseDetail({
                   <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-gray-900 font-medium mb-1">
-                      Latest: {caseItem.emailThread[caseItem.emailThread.length - 1].subject}
+                      Latest:{" "}
+                      {
+                        caseItem.emailThread[caseItem.emailThread.length - 1]
+                          .subject
+                      }
                     </p>
                     <p className="text-sm text-gray-600">
-                      {caseItem.emailThread[caseItem.emailThread.length - 1].type === 'sent' ? 'Sent' : 'Received'} on{' '}
-                      {new Date(caseItem.emailThread[caseItem.emailThread.length - 1].date).toLocaleDateString()}
+                      {caseItem.emailThread[caseItem.emailThread.length - 1]
+                        .type === "sent"
+                        ? "Sent"
+                        : "Received"}{" "}
+                      on{" "}
+                      {new Date(
+                        caseItem.emailThread[
+                          caseItem.emailThread.length - 1
+                        ].date
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -386,12 +401,16 @@ export function CaseDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Case?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this case and all associated data.
+              This action cannot be undone. This will permanently delete this
+              case and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -404,7 +423,8 @@ export function CaseDetail({
           <DialogHeader>
             <DialogTitle>Resolve Case</DialogTitle>
             <DialogDescription>
-              Mark this case as resolved and optionally provide feedback about your experience.
+              Mark this case as resolved and optionally provide feedback about
+              your experience.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -421,16 +441,16 @@ export function CaseDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setResolveDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirmResolve}>
-              Mark as Resolved
-            </Button>
+            <Button onClick={handleConfirmResolve}>Mark as Resolved</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
