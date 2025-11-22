@@ -22,10 +22,10 @@ import { DenialExtractedInfo, type DenialParsedData } from './components/DenialE
 import { EmailThread } from './components/EmailThread';
 import { EditInsurancePlan } from './components/EditInsurancePlan';
 
-export type Screen = 
+export type Screen =
   | 'login'
   | 'hipaa-consent'
-  | 'dashboard' 
+  | 'dashboard'
   | 'my-cases'
   | 'insurance-plans'
   | 'edit-insurance-plan'
@@ -38,10 +38,10 @@ export type Screen =
   | 'denial-extracted-info'
   | 'case-detail'
   | 'email-thread'
-  | 'strategy' 
-  | 'email-review' 
-  | 'email-sent' 
-  | 'reply-received' 
+  | 'strategy'
+  | 'email-review'
+  | 'email-sent'
+  | 'reply-received'
   | 'followup-review'
   | 'settings';
 
@@ -92,7 +92,7 @@ export default function App() {
   const [currentCaseId, setCurrentCaseId] = useState<string | null>(null);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-  
+
   // Draft state for insurance plan creation
   const [planDraft, setPlanDraft] = useState<{
     policyType?: 'comprehensive' | 'supplementary';
@@ -108,45 +108,45 @@ export default function App() {
     setUser(userData);
     setUserEmail(userData.email);
     setIsLoggedIn(true);
-    
+
     if (userData.hipaaAccepted) {
-        setHasAcceptedHIPAA(true);
-        setCurrentScreen('dashboard');
+      setHasAcceptedHIPAA(true);
+      setCurrentScreen('dashboard');
     } else {
-        setCurrentScreen('hipaa-consent');
+      setCurrentScreen('hipaa-consent');
     }
   };
 
   const handleHIPAAAccept = async () => {
     if (!user?._id) {
-        // Fallback if user ID is missing (shouldn't happen with real login)
-        setHasAcceptedHIPAA(true);
-        setCurrentScreen('dashboard');
-        return;
+      // Fallback if user ID is missing (shouldn't happen with real login)
+      setHasAcceptedHIPAA(true);
+      setCurrentScreen('dashboard');
+      return;
     }
 
     try {
-        const response = await fetch(`http://localhost:8000/api/users/${user._id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ hipaaAccepted: true }),
-        });
+      const response = await fetch(`http://localhost:8000/api/users/${user._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hipaaAccepted: true, termsAccepted: true }),
+      });
 
-        if (response.ok) {
-            const updatedUser = await response.json();
-            setUser(updatedUser);
-            setHasAcceptedHIPAA(true);
-            setCurrentScreen('dashboard');
-        } else {
-            console.error("Failed to update HIPAA status");
-            // Allow proceeding anyway for UX, but log error
-            setHasAcceptedHIPAA(true);
-            setCurrentScreen('dashboard');
-        }
-    } catch (e) {
-        console.error("Error updating HIPAA status:", e);
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
         setHasAcceptedHIPAA(true);
         setCurrentScreen('dashboard');
+      } else {
+        console.error("Failed to update HIPAA status");
+        // Allow proceeding anyway for UX, but log error
+        setHasAcceptedHIPAA(true);
+        setCurrentScreen('dashboard');
+      }
+    } catch (e) {
+      console.error("Error updating HIPAA status:", e);
+      setHasAcceptedHIPAA(true);
+      setCurrentScreen('dashboard');
     }
   };
 
@@ -200,7 +200,7 @@ export default function App() {
 
   const handlePlanPolicyUploadComplete = (policyType: 'comprehensive' | 'supplementary', files: File[]) => {
     setPlanDraft({ ...planDraft, policyType, policyFiles: files });
-    
+
     // Simulate document analysis
     setTimeout(() => {
       const extractedData: InsurancePlanParsedData = {
@@ -257,12 +257,12 @@ export default function App() {
         // The backend returns 'policyFiles: { name, size, ... }'.
         // We might need to adjust the frontend type or map the response.
         // For simplicity, let's assume we just refresh the list or add the local version.
-        
+
         // Let's just add the local version to state to avoid type errors for now, 
         // but in a real app we should fetch the fresh list.
         const newPlan: InsurancePlan = {
-            ...savedPlan,
-            policyFiles: planDraft.policyFiles // Keep local file references for UI
+          ...savedPlan,
+          policyFiles: planDraft.policyFiles // Keep local file references for UI
         };
 
         setInsurancePlans([...insurancePlans, newPlan]);
@@ -290,7 +290,7 @@ export default function App() {
   };
 
   const handleSaveEditedPlan = (updatedPlan: InsurancePlan) => {
-    setInsurancePlans(insurancePlans.map(p => 
+    setInsurancePlans(insurancePlans.map(p =>
       p.id === updatedPlan.id ? updatedPlan : p
     ));
     setCurrentPlanId(null);
@@ -299,39 +299,39 @@ export default function App() {
 
   const handleDenialUploadComplete = async (files: File[]) => {
     if (!currentCaseId) return;
-    
+
     const formData = new FormData();
     files.forEach(file => {
-        formData.append("denialFiles[]", file);
+      formData.append("denialFiles[]", file);
     });
 
     try {
-        const response = await fetch(`http://localhost:8000/api/cases/${currentCaseId}/files`, {
-            method: "POST",
-            body: formData
-        });
+      const response = await fetch(`http://localhost:8000/api/cases/${currentCaseId}/files`, {
+        method: "POST",
+        body: formData
+      });
 
-        if (response.ok) {
-            const updatedCase = await response.json();
-             setCases(cases.map(c => 
-                c.id === currentCaseId 
-                    ? { ...c, denialFiles: files, status: 'analyzing' } // Keep local files for UI
-                    : c
-            ));
+      if (response.ok) {
+        const updatedCase = await response.json();
+        setCases(cases.map(c =>
+          c.id === currentCaseId
+            ? { ...c, denialFiles: files, status: 'analyzing' } // Keep local files for UI
+            : c
+        ));
 
-            // Simulate denial document analysis
-            setTimeout(() => {
-                const extractedDenialData: DenialParsedData = {
-                    briefDescription: 'ER visit for chest pain denied as not medically necessary'
-                };
-                
-                setCurrentScreen('denial-extracted-info');
-            }, 2000);
-        } else {
-            console.error("Failed to upload files");
-        }
+        // Simulate denial document analysis
+        setTimeout(() => {
+          const extractedDenialData: DenialParsedData = {
+            briefDescription: 'ER visit for chest pain denied as not medically necessary'
+          };
+
+          setCurrentScreen('denial-extracted-info');
+        }, 2000);
+      } else {
+        console.error("Failed to upload files");
+      }
     } catch (e) {
-        console.error("Error uploading files:", e);
+      console.error("Error uploading files:", e);
     }
   };
 
@@ -348,8 +348,8 @@ export default function App() {
       denialReason: data.briefDescription
     };
 
-    setCases(prevCases => prevCases.map(c => 
-      c.id === currentCaseId 
+    setCases(prevCases => prevCases.map(c =>
+      c.id === currentCaseId
         ? { ...c, parsedData, denialReasonTitle: data.briefDescription, currentStep: 'strategy', status: 'ready-to-send' }
         : c
     ));
@@ -359,8 +359,8 @@ export default function App() {
 
   const handleDraftEmail = (draft: { subject: string; body: string }) => {
     if (!currentCaseId) return;
-    setCases(cases.map(c => 
-      c.id === currentCaseId 
+    setCases(cases.map(c =>
+      c.id === currentCaseId
         ? { ...c, currentStep: 'email-review' }
         : c
     ));
@@ -369,8 +369,8 @@ export default function App() {
 
   const handleSendEmail = (message: EmailMessage) => {
     if (!currentCaseId) return;
-    setCases(cases.map(c => 
-      c.id === currentCaseId 
+    setCases(cases.map(c =>
+      c.id === currentCaseId
         ? { ...c, emailThread: [...c.emailThread, message], status: 'awaiting-reply', currentStep: 'email-sent' }
         : c
     ));
@@ -388,8 +388,8 @@ export default function App() {
       date: new Date().toISOString(),
       type: 'received'
     };
-    setCases(cases.map(c => 
-      c.id === currentCaseId 
+    setCases(cases.map(c =>
+      c.id === currentCaseId
         ? { ...c, emailThread: [...c.emailThread, reply], status: 'reply-received', currentStep: 'reply-received', hasNewEmail: true }
         : c
     ));
@@ -408,7 +408,7 @@ export default function App() {
   const handleResumeCase = (caseId: string) => {
     const caseToResume = cases.find(c => c.id === caseId);
     if (!caseToResume) return;
-    
+
     setCurrentCaseId(caseId);
     setCurrentScreen(caseToResume.currentStep);
   };
@@ -422,8 +422,8 @@ export default function App() {
   };
 
   const handleResolveCase = (caseId: string, feedback?: string) => {
-    setCases(cases.map(c => 
-      c.id === caseId 
+    setCases(cases.map(c =>
+      c.id === caseId
         ? { ...c, resolved: true, resolvedDate: new Date().toISOString(), feedback }
         : c
     ));
@@ -456,15 +456,15 @@ export default function App() {
         return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
       case 'my-cases':
         return <MyCases cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onStartNew={handleStartNewAppeal} onDeleteCase={handleDeleteCase} onResolveCase={handleResolveCase} />;
-      
+
       // Insurance Plans Management
       case 'insurance-plans':
-        return <InsurancePlans 
-          plans={insurancePlans} 
+        return <InsurancePlans
+          plans={insurancePlans}
           onAddPlan={() => handleAddInsurancePlan(false)}
           onEditPlan={handleEditPlan}
         />;
-      
+
       case 'edit-insurance-plan':
         const planToEdit = insurancePlans.find(p => p.id === currentPlanId);
         if (!planToEdit) {
@@ -477,7 +477,7 @@ export default function App() {
           onBack={() => setCurrentScreen('insurance-plans')}
         />;
       case 'add-insurance-plan-upload':
-        return <InsurancePlanPolicyUpload 
+        return <InsurancePlanPolicyUpload
           onComplete={handlePlanPolicyUploadComplete}
           onBack={() => {
             setPlanDraft(null);
@@ -485,20 +485,20 @@ export default function App() {
           }}
         />;
       case 'add-insurance-plan-extracted':
-        return <InsurancePlanExtractedInfo 
+        return <InsurancePlanExtractedInfo
           data={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '', groupNumber: '' }}
           onSave={handlePlanExtractedInfoSave}
           onBack={() => setCurrentScreen('add-insurance-plan-upload')}
         />;
       case 'add-insurance-plan-coverage':
-        return <AddInsurancePlanCoverage 
+        return <AddInsurancePlanCoverage
           userEmail={userEmail}
           initialCoveredIndividuals={planDraft?.coveredIndividuals}
           onContinue={handlePlanCoverageComplete}
           onBack={() => setCurrentScreen('add-insurance-plan-extracted')}
         />;
       case 'add-insurance-plan-review':
-        return <AddInsurancePlanReview 
+        return <AddInsurancePlanReview
           planData={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '', groupNumber: '' }}
           policyType={planDraft?.policyType || 'comprehensive'}
           policyFiles={planDraft?.policyFiles || []}
@@ -507,29 +507,29 @@ export default function App() {
           onConfirm={handlePlanReviewConfirm}
           onBack={() => setCurrentScreen('add-insurance-plan-coverage')}
         />;
-      
+
       // Start New Appeal Flow
       case 'select-plan-for-appeal':
-        return <SelectPlanForAppeal 
+        return <SelectPlanForAppeal
           plans={insurancePlans}
           onContinue={handleStartNewAppealWithPlan}
           onCancel={() => setCurrentScreen('dashboard')}
           onAddPlan={() => handleAddInsurancePlan(true)}
         />;
-      
+
       // Case Details and Management
       case 'case-detail':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         const casePlan = insurancePlans.find(p => p.id === currentCase.planId);
-        return <CaseDetail 
-          case={currentCase} 
+        return <CaseDetail
+          case={currentCase}
           plan={casePlan}
-          onBack={() => setCurrentScreen('my-cases')} 
-          onDeleteCase={handleDeleteCase} 
+          onBack={() => setCurrentScreen('my-cases')}
+          onDeleteCase={handleDeleteCase}
           onResolveCase={handleResolveCase}
           onViewEmailThread={handleViewEmailThread}
         />;
-      
+
       case 'email-thread':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailThread
@@ -537,18 +537,18 @@ export default function App() {
           userEmail={userEmail}
           onBack={() => setCurrentScreen('case-detail')}
         />;
-      
+
       // Appeal Creation Flow
       case 'denial-upload':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <DenialUpload 
-          onContinue={handleDenialUploadComplete} 
-          onBack={() => setCurrentScreen('select-plan-for-appeal')} 
+        return <DenialUpload
+          onContinue={handleDenialUploadComplete}
+          onBack={() => setCurrentScreen('select-plan-for-appeal')}
         />;
       case 'denial-extracted-info':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         const plan = insurancePlans.find(p => p.id === currentCase.planId);
-        return <DenialExtractedInfo 
+        return <DenialExtractedInfo
           data={{ briefDescription: currentCase.denialReasonTitle }}
           insuranceCompany={plan?.insuranceCompany || 'Unknown'}
           policyNumber={plan?.policyNumber || 'Unknown'}
@@ -585,8 +585,8 @@ export default function App() {
   // When logged in and HIPAA accepted, render with sidebar and flex layout
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar 
-        currentScreen={currentScreen} 
+      <Sidebar
+        currentScreen={currentScreen}
         onNavigate={setCurrentScreen}
       />
       <div className="flex-1">

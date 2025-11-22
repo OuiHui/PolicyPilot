@@ -11,6 +11,7 @@ interface AuthFormProps {
     onGoogleSignup?: () => void;
     mode?: "signup" | "login";
     onToggleMode?: () => void;
+    error?: string | null;
 }
 
 const AuthForm = ({
@@ -19,6 +20,7 @@ const AuthForm = ({
     onGoogleSignup,
     mode = "login",
     onToggleMode,
+    error,
 }: AuthFormProps) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -90,6 +92,11 @@ const AuthForm = ({
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
+                    {error && (
+                        <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-200">
+                            {error}
+                        </div>
+                    )}
                     <Button type="submit" className="w-full">
                         {mainButtonText}
                     </Button>

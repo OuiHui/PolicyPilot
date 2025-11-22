@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   hipaaAccepted: { type: Boolean, default: false },
+  termsAccepted: { type: Boolean, default: false },
   createdAt: { type: String, default: () => new Date().toISOString() },
 });
 

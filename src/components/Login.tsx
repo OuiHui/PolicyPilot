@@ -23,14 +23,17 @@ export function Login({ onLogin }: LoginProps) {
                 if (response.ok) {
                     const user = await response.json();
                     console.log("Logged in:", user);
-                    console.log("Logged in:", user);
                     onLogin(user);
                 } else {
                     const data = await response.json();
-                    setError(data.error || "Login failed");
+                    if (response.status === 404) {
+                        setError("Account not found. Please create an account.");
+                    } else {
+                        setError(data.error || "Login failed");
+                    }
                 }
             } catch (err) {
-                setError("Failed to connect to server");
+                setError("Failed to connect to server. Please ensure the backend is running.");
                 console.error(err);
             }
         } else {
@@ -39,7 +42,7 @@ export function Login({ onLogin }: LoginProps) {
                 // In a real app, we'd add fields for names
                 const firstName = "New";
                 const lastName = "User";
-                
+
                 const response = await fetch("http://localhost:8000/api/users", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -77,12 +80,8 @@ export function Login({ onLogin }: LoginProps) {
                 onSubmit={handleSubmit}
                 onGoogleSignup={handleGoogleAuth}
                 onToggleMode={toggleMode}
+                error={error}
             />
-            {error && (
-                <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <p>{error}</p>
-                </div>
-            )}
         </>
     );
 }
