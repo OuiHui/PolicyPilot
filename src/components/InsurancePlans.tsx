@@ -5,7 +5,19 @@ import {
   Pencil,
   FileText,
   Calendar,
+  Trash2,
 } from "lucide-react";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { formatPolicyType } from "../utils/format";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -34,13 +46,30 @@ type InsurancePlansProps = {
   plans: InsurancePlan[];
   onAddPlan: () => void;
   onEditPlan: (planId: string) => void;
+  onDeletePlan: (planId: string) => void;
 };
 
 export function InsurancePlans({
   plans,
   onAddPlan,
   onEditPlan,
+  onDeletePlan,
 }: InsurancePlansProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+
+  const handleDeleteClick = (planId: string) => {
+    setPlanToDelete(planId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (planToDelete) {
+      onDeletePlan(planToDelete);
+      setDeleteDialogOpen(false);
+      setPlanToDelete(null);
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -101,6 +130,14 @@ export function InsurancePlans({
                     onClick={() => onEditPlan(plan.id)}
                   >
                     <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDeleteClick(plan.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
 
@@ -168,6 +205,23 @@ export function InsurancePlans({
           </div>
         )}
       </div>
-    </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Insurance Plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this insurance plan and remove it from your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPlanToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div >
   );
 }

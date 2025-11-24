@@ -61,3 +61,16 @@ export const uploadDenialFiles = async (c: Context) => {
     return c.json({ error: e.message }, 500);
   }
 };
+
+export const deleteCase = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const deletedCase = await CaseModel.findOneAndDelete({ id });
+    if (!deletedCase) {
+      return c.json({ error: "Case not found" }, 404);
+    }
+    return c.json({ message: "Case deleted successfully" });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};

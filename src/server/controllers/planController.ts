@@ -56,3 +56,16 @@ export const createPlan = async (c: Context) => {
     return c.json({ error: e.message }, 400);
   }
 };
+
+export const deletePlan = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const plan = await InsurancePlanModel.findOneAndDelete({ id });
+    if (!plan) {
+      return c.json({ error: "Plan not found" }, 404);
+    }
+    return c.json({ message: "Plan deleted successfully" });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};

@@ -433,11 +433,39 @@ export default function App() {
     setCurrentScreen(caseToResume.currentStep);
   };
 
-  const handleDeleteCase = (caseId: string) => {
-    setCases(cases.filter(c => c.id !== caseId));
-    if (currentCaseId === caseId) {
-      setCurrentCaseId(null);
-      setCurrentScreen('my-cases');
+  const handleDeleteCase = async (caseId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/cases/${caseId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setCases(cases.filter(c => c.id !== caseId));
+        if (currentCaseId === caseId) {
+          setCurrentCaseId(null);
+          setCurrentScreen('my-cases');
+        }
+      } else {
+        console.error("Failed to delete case");
+      }
+    } catch (e) {
+      console.error("Error deleting case:", e);
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/plans/${planId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setInsurancePlans(insurancePlans.filter(p => p.id !== planId));
+      } else {
+        console.error("Failed to delete plan");
+      }
+    } catch (e) {
+      console.error("Error deleting plan:", e);
     }
   };
 
@@ -483,6 +511,7 @@ export default function App() {
           plans={insurancePlans}
           onAddPlan={() => handleAddInsurancePlan(false)}
           onEditPlan={handleEditPlan}
+          onDeletePlan={handleDeletePlan}
         />;
 
       case 'edit-insurance-plan':
