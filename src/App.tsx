@@ -104,10 +104,30 @@ export default function App() {
 
   const getCurrentCase = () => cases.find(c => c.id === currentCaseId);
 
-  const handleLogin = (userData: any) => {
+  const handleLogin = async (userData: any) => {
     setUser(userData);
     setUserEmail(userData.email);
     setIsLoggedIn(true);
+
+    if (userData._id) {
+      try {
+        const [plansRes, casesRes] = await Promise.all([
+          fetch(`http://localhost:8000/api/plans?userId=${userData._id}`),
+          fetch(`http://localhost:8000/api/cases?userId=${userData._id}`)
+        ]);
+
+        if (plansRes.ok) {
+          const plans = await plansRes.json();
+          setInsurancePlans(plans);
+        }
+        if (casesRes.ok) {
+          const userCases = await casesRes.json();
+          setCases(userCases);
+        }
+      } catch (e) {
+        console.error("Error fetching user data", e);
+      }
+    }
 
     if (userData.hipaaAccepted) {
       setHasAcceptedHIPAA(true);
@@ -160,7 +180,7 @@ export default function App() {
 
     const newCaseData = {
       id: Date.now().toString(),
-      userId: "691e93c4fd7adcd73e6f628c", // TODO: Use real user ID from login
+      userId: user?._id || "691e93c4fd7adcd73e6f628c",
       planId,
       coveredPersonId,
       denialReasonTitle: 'Pending Analysis',

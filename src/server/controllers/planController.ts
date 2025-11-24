@@ -3,7 +3,9 @@ import { InsurancePlanModel } from "../models/InsurancePlan";
 
 export const getPlans = async (c: Context) => {
   try {
-    const plans = await InsurancePlanModel.find();
+    const userId = c.req.query("userId");
+    const filter = userId ? { userId } : {};
+    const plans = await InsurancePlanModel.find(filter);
     return c.json(plans);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -14,7 +16,7 @@ export const createPlan = async (c: Context) => {
   try {
     const body = await c.req.parseBody();
     const files = body["policyFiles[]"]; // Hono handles multiple files with [] suffix or just key depending on client
-    
+
     // Handle files
     const policyFiles = [];
     const fileList = Array.isArray(files) ? files : files ? [files] : [];

@@ -3,7 +3,9 @@ import { CaseModel } from "../models/Case";
 
 export const getCases = async (c: Context) => {
   try {
-    const cases = await CaseModel.find();
+    const userId = c.req.query("userId");
+    const filter = userId ? { userId } : {};
+    const cases = await CaseModel.find(filter);
     return c.json(cases);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
