@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, ArrowLeft, Edit, Info } from "lucide-react";
+import { ArrowRight, ArrowLeft, FileText, Info } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Textarea } from "./ui/textarea";
@@ -57,8 +57,8 @@ export function DenialExtractedInfo({
 
         <Card className="p-8 mb-6">
           <div className="flex items-center gap-2 mb-6">
-            <Edit className="w-5 h-5 text-blue-600" />
-            <h2 className="text-gray-900">Editable Field</h2>
+            <FileText className="w-5 h-5 text-blue-600" />
+            <h2 className="text-gray-900">Denial Description</h2>
           </div>
 
           <div className="space-y-6">
