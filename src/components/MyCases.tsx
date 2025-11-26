@@ -246,12 +246,23 @@ export function MyCases({
                           <Badge className="bg-yellow-600 mb-3">
                             In Progress: {getStepText(caseItem.currentStep)}
                           </Badge>
-                          <Button
-                            onClick={() => onResumeCase(caseItem.id)}
-                            className="w-full mt-3"
-                          >
-                            Resume
-                          </Button>
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              onClick={() => onResumeCase(caseItem.id)}
+                              className="flex-1"
+                            >
+                              Resume
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteClick(caseItem.id)}
+                              variant="destructive"
+                              size="icon"
+                              className="px-3"
+                              title="Delete Case"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </>
                       ) : (
                         <>

@@ -91,7 +91,8 @@ export function InsurancePlans({
         const data = await response.json();
         url = data.signedUrl;
       } else {
-        console.error('Invalid file format:', file);
+        console.warn('File missing storage metadata:', file);
+        alert('Cannot view this document. It may have been uploaded before storage was configured.');
         return;
       }
 
@@ -327,9 +328,20 @@ export function InsurancePlans({
       </AlertDialog>
 
       <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
-        <DialogContent className="max-w-4xl w-full h-[80vh]">
+        <DialogContent
+          className="p-0"
+          style={{
+            maxWidth: '95vw',
+            width: '95vw',
+            height: '95vh',
+            maxHeight: '95vh'
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{selectedFileName}</DialogTitle>
+            <DialogDescription>
+              Viewing document securely
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 h-full min-h-[60vh] bg-gray-100 rounded-md overflow-hidden">
             {selectedFileUrl ? (
@@ -337,6 +349,7 @@ export function InsurancePlans({
                 src={selectedFileUrl}
                 className="w-full h-full border-0"
                 title="Document Viewer"
+                allow="fullscreen"
               />
             ) : (
               <div className="flex items-center justify-center h-full">

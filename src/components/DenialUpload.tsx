@@ -6,23 +6,39 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
+  Trash2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { ProgressBar } from "./ProgressBar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+
+type DenialFile = File | { name: string; size: number; type: string; bucket?: string; path?: string };
 
 type DenialUploadProps = {
-  initialFiles?: File[];
-  onContinue: (files: File[]) => void;
+  initialFiles?: DenialFile[];
+  onContinue: (files: DenialFile[]) => void;
   onBack: () => void;
+  onDelete?: () => void;
 };
 
 export function DenialUpload({
   initialFiles = [],
   onContinue,
   onBack,
+  onDelete,
 }: DenialUploadProps) {
-  const [files, setFiles] = useState<File[]>(initialFiles || []);
+  const [files, setFiles] = useState<DenialFile[]>(initialFiles || []);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
 
@@ -102,10 +118,9 @@ export function DenialUpload({
             onDrop={handleDrop}
             className={`
               border-2 border-dashed rounded-lg p-12 text-center transition-all cursor-pointer
-              ${
-                dragOver
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400"
+              ${dragOver
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 hover:border-gray-400"
               }
             `}
           >
@@ -137,11 +152,10 @@ export function DenialUpload({
                 {files.map((file, index) => (
                   <div
                     key={`${file.name}-${file.size}-${index}`}
-                    className={`flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg transition-transform ${
-                      recentlyAdded === file.name
-                        ? "ring-2 ring-green-200 scale-105"
-                        : ""
-                    }`}
+                    className={`flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg transition-transform ${recentlyAdded === file.name
+                      ? "ring-2 ring-green-200 scale-105"
+                      : ""
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-600" />
@@ -179,10 +193,22 @@ export function DenialUpload({
         </div>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} size="lg">
-            <ArrowLeft className="mr-2 w-5 h-5" />
-            Back
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onBack} size="lg">
+              <ArrowLeft className="mr-2 w-5 h-5" />
+              Back
+            </Button>
+            {onDelete && (
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                size="lg"
+              >
+                <Trash2 className="mr-2 w-5 h-5" />
+                Delete
+              </Button>
+            )}
+          </div>
           <Button
             onClick={() => onContinue(files)}
             disabled={files.length === 0}
@@ -194,6 +220,29 @@ export function DenialUpload({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Appeal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this appeal? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (onDelete) onDelete();
+                setDeleteDialogOpen(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

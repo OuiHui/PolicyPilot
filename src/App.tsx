@@ -306,7 +306,7 @@ export default function App() {
   };
 
   const handlePlanPolicyUploadComplete = (policyType: 'comprehensive' | 'supplementary', files: File[]) => {
-    setPlanDraft({ ...planDraft, policyType, policyFiles: files });
+    setPlanDraft(prev => ({ ...prev!, policyType, policyFiles: files }));
 
     // Simulate document analysis
     setTimeout(() => {
@@ -316,18 +316,18 @@ export default function App() {
         policyNumber: 'ABC123456',
         groupNumber: 'GRP789',
       };
-      setPlanDraft(prev => ({ ...prev, planData: extractedData }));
+      setPlanDraft(prev => ({ ...prev!, planData: extractedData }));
       setCurrentScreen('add-insurance-plan-extracted');
     }, 2000);
   };
 
   const handlePlanExtractedInfoSave = (data: InsurancePlanParsedData) => {
-    setPlanDraft({ ...planDraft, planData: data });
+    setPlanDraft(prev => ({ ...prev!, planData: data }));
     setCurrentScreen('add-insurance-plan-coverage');
   };
 
   const handlePlanCoverageComplete = (coveredIndividuals: any[]) => {
-    setPlanDraft({ ...planDraft, coveredIndividuals });
+    setPlanDraft(prev => ({ ...prev!, coveredIndividuals }));
     setCurrentScreen('add-insurance-plan-review');
   };
 
@@ -437,23 +437,81 @@ export default function App() {
     setCurrentScreen('edit-insurance-plan');
   };
 
-  const handleSaveEditedPlan = (updatedPlan: InsurancePlan) => {
-    setInsurancePlans(insurancePlans.map(p =>
-      p.id === updatedPlan.id ? updatedPlan : p
-    ));
-    setCurrentPlanId(null);
-    setCurrentScreen('insurance-plans');
+  const handleSaveEditedPlan = async (updatedPlan: InsurancePlan) => {
+    try {
+      let finalPolicyFiles = updatedPlan.policyFiles;
+
+      // If Supabase is configured, upload new files
+      if (isSupabaseConfigured) {
+        const uploadedFiles = [];
+        for (const file of updatedPlan.policyFiles) {
+          if (file instanceof File) {
+            // New file, upload it
+            const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const userId = (updatedPlan as any).userId || 'anon';
+            const path = `policies/${userId}/${Date.now()}-${cleanName}`;
+
+            await uploadFileToSupabase(file, 'policies', path);
+            uploadedFiles.push({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              bucket: 'policies',
+              path: path,
+              lastModified: file.lastModified
+            });
+          } else {
+            // Existing file metadata
+            uploadedFiles.push(file);
+          }
+        }
+        finalPolicyFiles = uploadedFiles as any;
+      }
+
+      // Prepare updates for backend
+      const updates = {
+        ...updatedPlan,
+        policyFiles: finalPolicyFiles
+      };
+
+      const response = await fetch(apiUrl(`/api/plans/${updatedPlan.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (response.ok) {
+        const savedPlan = await response.json();
+
+        // Update local state with the saved plan and the file list we just constructed
+        // (which includes metadata for new files)
+        setInsurancePlans(insurancePlans.map(p =>
+          p.id === updatedPlan.id ? { ...savedPlan, policyFiles: finalPolicyFiles } : p
+        ));
+        setCurrentPlanId(null);
+        setCurrentScreen('insurance-plans');
+      } else {
+        console.error("Failed to update plan");
+        alert("Failed to save changes. Please try again.");
+      }
+    } catch (e) {
+      console.error("Error updating plan:", e);
+      alert("Error updating plan. Please check your connection.");
+    }
   };
 
-  const handleDenialUploadComplete = async (files: File[]) => {
+  const handleDenialUploadComplete = async (files: (File | { name: string; size: number; type: string; bucket?: string; path?: string })[]) => {
     if (!currentCaseId) return;
 
     try {
-      let response;
+      const newFiles = files.filter(f => f instanceof File) as File[];
+      const existingFiles = files.filter(f => !(f instanceof File)) as { name: string; size: number; type: string; bucket?: string; path?: string }[];
+
+      let updatedCase;
 
       if (isSupabaseConfigured) {
-        // Upload to Supabase Storage (supports 100MB+ files)
-        const uploadedFiles = await Promise.all(files.map(async (file) => {
+        // Upload new files to Supabase
+        const uploadedNewFiles = await Promise.all(newFiles.map(async (file) => {
           const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
           const path = `cases/${currentCaseId}/${Date.now()}-${cleanName}`;
 
@@ -469,28 +527,37 @@ export default function App() {
           };
         }));
 
-        response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ denialFiles: uploadedFiles })
+        const allFiles = [...existingFiles, ...uploadedNewFiles];
+
+        // Use updateCaseInDb (PATCH) to sync the full list
+        updatedCase = await updateCaseInDb(currentCaseId, {
+          denialFiles: allFiles,
+          status: 'analyzing'
         });
+
       } else {
         // Fallback: Direct upload (limited to 4.5MB on Vercel)
-        const formData = new FormData();
-        files.forEach(file => {
-          formData.append("denialFiles[]", file);
-        });
+        if (newFiles.length > 0) {
+          const formData = new FormData();
+          newFiles.forEach(file => {
+            formData.append("denialFiles[]", file);
+          });
 
-        response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
-          method: "POST",
-          body: formData
-        });
+          const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
+            method: "POST",
+            body: formData
+          });
+
+          if (response.ok) {
+            updatedCase = await response.json();
+          }
+        } else {
+          const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
+          if (response.ok) updatedCase = await response.json();
+        }
       }
 
-      if (response.ok) {
-        const updatedCase = await response.json();
-
-        // Update the case in state with the server's response
+      if (updatedCase) {
         setCases(cases.map(c =>
           c.id === currentCaseId ? updatedCase : c
         ));
@@ -504,7 +571,7 @@ export default function App() {
           setCurrentScreen('denial-extracted-info');
         }, 2000);
       } else {
-        console.error("Failed to upload files");
+        console.error("Failed to upload/update files");
       }
     } catch (e) {
       console.error("Error uploading files:", e);
@@ -752,8 +819,10 @@ export default function App() {
       case 'denial-upload':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <DenialUpload
+          initialFiles={currentCase.denialFiles}
           onContinue={handleDenialUploadComplete}
           onBack={() => setCurrentScreen('select-plan-for-appeal')}
+          onDelete={() => handleDeleteCase(currentCase.id)}
         />;
       case 'denial-extracted-info':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;

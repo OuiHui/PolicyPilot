@@ -64,9 +64,10 @@ export function CaseDetail({
   const [feedback, setFeedback] = useState("");
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
-
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteFileIndex, setDeleteFileIndex] = useState<number | null>(null);
+  const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -133,7 +134,8 @@ export function CaseDetail({
         const data = await response.json();
         url = data.signedUrl;
       } else {
-        console.error('Invalid file format:', file);
+        console.warn('File missing storage metadata:', file);
+        alert('Cannot view this document. It may have been uploaded before storage was configured.');
         return;
       }
 
@@ -146,8 +148,14 @@ export function CaseDetail({
     }
   };
 
-  const handleRemoveFile = async (index: number) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+  const handleRemoveFile = (index: number) => {
+    setDeleteFileIndex(index);
+    setDeleteFileDialogOpen(true);
+  };
+
+  const confirmRemoveFile = async () => {
+    if (deleteFileIndex === null) return;
+    const index = deleteFileIndex;
 
     const fileToRemove = caseItem.denialFiles[index];
     const updatedFiles = caseItem.denialFiles.filter((_, i) => i !== index);
@@ -179,6 +187,9 @@ export function CaseDetail({
     } catch (error) {
       console.error('Error removing file:', error);
       alert('Error removing file');
+    } finally {
+      setDeleteFileDialogOpen(false);
+      setDeleteFileIndex(null);
     }
   };
 
@@ -333,6 +344,29 @@ export function CaseDetail({
                         )?.relationship
                         })`}
                     </p>
+                  </div>
+                )}
+                {plan.policyFiles && plan.policyFiles.length > 0 && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-gray-500 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Policy Documents
+                    </p>
+                    <div className="space-y-2">
+                      {plan.policyFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                          <span className="text-gray-900 truncate">{file.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewFile(file)}
+                            title="View document"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -520,12 +554,33 @@ export function CaseDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Case?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this case and all associated data.
+              Are you sure you want to delete this case? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete File Dialog */}
+      <AlertDialog open={deleteFileDialogOpen} onOpenChange={setDeleteFileDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteFileDialogOpen(false);
+              setDeleteFileIndex(null);
+            }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveFile} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -588,6 +643,7 @@ export function CaseDetail({
                 src={selectedFileUrl}
                 className="w-full h-full border-0"
                 title={selectedFileName || 'File viewer'}
+                allow="fullscreen"
               />
             )}
           </div>
