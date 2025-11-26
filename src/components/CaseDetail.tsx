@@ -278,9 +278,10 @@ export function CaseDetail({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleViewFile(file)}
+                        onClick={() => alert('Delete functionality coming soon')}
+                        title="Remove document"
                       >
-                        <Download className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
                   </div>
