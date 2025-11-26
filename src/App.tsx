@@ -111,6 +111,8 @@ export default function App() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
+    const storedScreen = localStorage.getItem('currentScreen');
+    const storedCaseId = localStorage.getItem('currentCaseId');
 
     if (storedUser && storedIsLoggedIn === 'true') {
       const userData = JSON.parse(storedUser);
@@ -120,7 +122,15 @@ export default function App() {
 
       if (userData.hipaaAccepted) {
         setHasAcceptedHIPAA(true);
-        setCurrentScreen('dashboard');
+        if (storedScreen) {
+          setCurrentScreen(storedScreen as Screen);
+        } else {
+          setCurrentScreen('dashboard');
+        }
+
+        if (storedCaseId) {
+          setCurrentCaseId(storedCaseId);
+        }
       }
 
       // Fetch data
@@ -141,6 +151,18 @@ export default function App() {
       }
     }
   }, []);
+
+  // Persist navigation state
+  useEffect(() => {
+    if (isLoggedIn) {
+      localStorage.setItem('currentScreen', currentScreen);
+      if (currentCaseId) {
+        localStorage.setItem('currentCaseId', currentCaseId);
+      } else {
+        localStorage.removeItem('currentCaseId');
+      }
+    }
+  }, [currentScreen, currentCaseId, isLoggedIn]);
 
   // Helper to update case in both state and database
   const updateCaseInDb = async (caseId: string, updates: Partial<Case>) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   ArrowLeft,
   FileText,
@@ -10,6 +10,7 @@ import {
   Eye,
   Building2,
   Users,
+  Upload,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -38,6 +39,8 @@ import { Label } from "./ui/label";
 import type { Case, EmailMessage } from "../App";
 import type { InsurancePlan } from "./InsurancePlans";
 import { apiUrl } from "../config";
+import { uploadFileToSupabase } from "../utils/supabase/storage";
+import { isSupabaseConfigured } from "../utils/supabase/client";
 
 type CaseDetailProps = {
   case: Case;
@@ -61,7 +64,13 @@ export function CaseDetail({
   const [feedback, setFeedback] = useState("");
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
   const getStatusText = (status: Case['status'], resolved?: boolean) => {
     if (resolved) return 'Resolved';
@@ -108,12 +117,9 @@ export function CaseDetail({
       let url: string;
       const fileName = file.name;
 
-      // Check if it's a File object or metadata
       if (file instanceof File) {
-        // Local File object - create object URL
         url = URL.createObjectURL(file);
       } else if (file.bucket && file.path) {
-        // Supabase metadata - fetch signed URL
         const response = await fetch(apiUrl('/api/files/signed-url'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -137,6 +143,87 @@ export function CaseDetail({
     } catch (error) {
       console.error('Error viewing file:', error);
       alert('Failed to load file. Please try again.');
+    }
+  };
+
+  const handleRemoveFile = async (index: number) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+
+    const fileToRemove = caseItem.denialFiles[index];
+    const updatedFiles = caseItem.denialFiles.filter((_, i) => i !== index);
+
+    try {
+      if (!(fileToRemove instanceof File) && fileToRemove.bucket && fileToRemove.path) {
+        const { supabase } = await import('../utils/supabase/client');
+        if (supabase) {
+          const { error } = await supabase.storage.from(fileToRemove.bucket).remove([fileToRemove.path]);
+          if (error) {
+            console.error('Supabase delete error:', error);
+          } else {
+            console.log('File deleted from Supabase');
+          }
+        }
+      }
+
+      const response = await fetch(apiUrl(`/api/cases/${caseItem.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ denialFiles: updatedFiles })
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert('Failed to update case');
+      }
+    } catch (error) {
+      console.error('Error removing file:', error);
+      alert('Error removing file');
+    }
+  };
+
+  const handleUploadMore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    const updatedFiles = [...caseItem.denialFiles];
+
+    try {
+      for (const file of newFiles) {
+        if (isSupabaseConfigured) {
+          const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const userId = (caseItem as any).userId || 'anon';
+          const path = `denials/${userId}/${Date.now()}-${cleanName}`;
+
+          await uploadFileToSupabase(file, 'denials', path);
+          updatedFiles.push({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            bucket: 'denials',
+            path: path
+          });
+        } else {
+          alert("Supabase not configured. Cannot upload.");
+          return;
+        }
+      }
+
+      const response = await fetch(apiUrl(`/api/cases/${caseItem.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ denialFiles: updatedFiles })
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert('Failed to upload files');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file');
     }
   };
 
@@ -254,67 +341,60 @@ export function CaseDetail({
 
           {/* Uploaded Documents */}
           <Card className="p-6">
-            <h2 className="text-gray-900 mb-4">Uploaded Documents</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-gray-900">Uploaded Documents</h2>
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  className="hidden"
+                  onChange={handleUploadMore}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <Button variant="outline" size="sm" onClick={handleUploadClick}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Document
+                </Button>
+              </div>
+            </div>
             <div className="space-y-3">
               <div>
                 <p className="text-gray-700 mb-2">Denial Documents</p>
-                {caseItem.denialFiles.map((file, index) => (
-                  <div
-                    key={`${file.name}-${index}`}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900">{file.name}</span>
+                {caseItem.denialFiles.length > 0 ? (
+                  caseItem.denialFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-gray-600" />
+                        <span className="text-gray-900">{file.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewFile(file)}
+                          title="View document"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFile(index)}
+                          title="Remove document"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewFile(file)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          const fileToRemove = caseItem.denialFiles[index];
-                          const updatedFiles = caseItem.denialFiles.filter((_, i) => i !== index);
-
-                          try {
-                            // Delete from Supabase if stored there
-                            if (!(fileToRemove instanceof File) && fileToRemove.bucket && fileToRemove.path) {
-                              const { supabase } = await import('../utils/supabase/client');
-                              if (supabase) {
-                                await supabase.storage.from(fileToRemove.bucket).remove([fileToRemove.path]);
-                              }
-                            }
-
-                            // Update MongoDB
-                            const response = await fetch(apiUrl(`/api/cases/${caseItem.id}`), {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ denialFiles: updatedFiles })
-                            });
-
-                            if (response.ok) {
-                              window.location.reload();
-                            }
-                          } catch (error) {
-                            console.error('Error:', error);
-                          }
-                        }}
-                        title="Remove document"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No documents uploaded</p>
+                )}
               </div>
-
-              {/* Policy documents now live on the InsurancePlan, so we don't show them from the Case anymore */}
             </div>
           </Card>
 
@@ -513,7 +593,6 @@ export function CaseDetail({
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
