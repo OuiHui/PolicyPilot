@@ -278,7 +278,33 @@ export function CaseDetail({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => alert('Delete functionality coming soon')}
+                        onClick={async () => {
+                          const fileToRemove = caseItem.denialFiles[index];
+                          const updatedFiles = caseItem.denialFiles.filter((_, i) => i !== index);
+
+                          try {
+                            // Delete from Supabase if stored there
+                            if (!(fileToRemove instanceof File) && fileToRemove.bucket && fileToRemove.path) {
+                              const { supabase } = await import('../utils/supabase/client');
+                              if (supabase) {
+                                await supabase.storage.from(fileToRemove.bucket).remove([fileToRemove.path]);
+                              }
+                            }
+
+                            // Update MongoDB
+                            const response = await fetch(apiUrl(`/api/cases/${caseItem.id}`), {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ denialFiles: updatedFiles })
+                            });
+
+                            if (response.ok) {
+                              window.location.reload();
+                            }
+                          } catch (error) {
+                            console.error('Error:', error);
+                          }
+                        }}
                         title="Remove document"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />

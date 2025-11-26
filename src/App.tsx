@@ -135,6 +135,10 @@ export default function App() {
     setUserEmail(userData.email);
     setIsLoggedIn(true);
 
+    // Persist login to localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('isLoggedIn', 'true');
+
     if (userData._id) {
       try {
         const [plansRes, casesRes] = await Promise.all([
