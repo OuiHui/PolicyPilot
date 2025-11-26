@@ -6,6 +6,9 @@ import {
   FileText,
   Calendar,
   Trash2,
+  Eye,
+  Download,
+  Upload,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -18,6 +21,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { apiUrl } from "../config";
 import { formatPolicyType } from "../utils/format";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -37,7 +49,7 @@ export type InsurancePlan = {
   policyNumber: string;
   groupNumber?: string;
   policyType: "comprehensive" | "supplementary";
-  policyFiles: File[];
+  policyFiles: (File | { name: string; size: number; type: string; bucket?: string; path?: string })[];
   coveredIndividuals: CoveredPerson[];
   dateAdded: string;
 };
@@ -57,6 +69,71 @@ export function InsurancePlans({
 }: InsurancePlansProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  const handleViewFile = async (file: File | { name: string; size: number; type: string; bucket?: string; path?: string }) => {
+    try {
+      let url: string;
+      const fileName = file.name;
+
+      if (file instanceof File) {
+        url = URL.createObjectURL(file);
+      } else if (file.bucket && file.path) {
+        const response = await fetch(apiUrl('/api/files/signed-url'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucket: file.bucket, path: file.path })
+        });
+
+        if (!response.ok) throw new Error('Failed to get file URL');
+        const data = await response.json();
+        url = data.signedUrl;
+      } else {
+        console.error('Invalid file format:', file);
+        return;
+      }
+
+      setSelectedFileUrl(url);
+      setSelectedFileName(fileName);
+      setFileDialogOpen(true);
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      alert('Failed to load file');
+    }
+  };
+
+  const handleRemoveFile = async (plan: InsurancePlan, index: number) => {
+    if (!confirm('Remove this document?')) return;
+
+    const fileToRemove = plan.policyFiles[index];
+    const updatedFiles = plan.policyFiles.filter((_, i) => i !== index);
+
+    try {
+      if (!(fileToRemove instanceof File) && fileToRemove.bucket && fileToRemove.path) {
+        const { supabase } = await import('../utils/supabase/client');
+        if (supabase) {
+          await supabase.storage.from(fileToRemove.bucket).remove([fileToRemove.path]);
+        }
+      }
+
+      const response = await fetch(apiUrl(`/api/plans/${plan.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ policyFiles: updatedFiles })
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert('Failed to remove file');
+      }
+    } catch (error) {
+      console.error('Error removing file:', error);
+      alert('Failed to remove file');
+    }
+  };
 
   const handleDeleteClick = (planId: string) => {
     setPlanToDelete(planId);
@@ -169,14 +246,40 @@ export function InsurancePlans({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant="outline">
-                    {plan.policyFiles.length}{" "}
-                    {plan.policyFiles.length === 1 ? "document" : "documents"}
-                  </Badge>
-                  <Badge variant="outline">
-                    {formatPolicyType(plan.policyType)}
-                  </Badge>
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm font-medium text-gray-700">Policy Documents</p>
+                  {plan.policyFiles.length > 0 ? (
+                    plan.policyFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <span className="truncate text-gray-700">{file.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleViewFile(file)}
+                            title="View document"
+                          >
+                            <Eye className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemoveFile(plan, index)}
+                            title="Remove document"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No documents uploaded</p>
+                  )}
                 </div>
 
                 <div className="border-t border-gray-200 pt-4">
@@ -222,6 +325,27 @@ export function InsurancePlans({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
+        <DialogContent className="max-w-4xl w-full h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedFileName}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 h-full min-h-[60vh] bg-gray-100 rounded-md overflow-hidden">
+            {selectedFileUrl ? (
+              <iframe
+                src={selectedFileUrl}
+                className="w-full h-full border-0"
+                title="Document Viewer"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">Loading document...</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { HIPAAConsent } from './components/HIPAAConsent';
@@ -106,6 +106,41 @@ export default function App() {
   } | null>(null);
 
   const getCurrentCase = () => cases.find(c => c.id === currentCaseId);
+
+  // Restore session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
+
+    if (storedUser && storedIsLoggedIn === 'true') {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setUserEmail(userData.email);
+      setIsLoggedIn(true);
+
+      if (userData.hipaaAccepted) {
+        setHasAcceptedHIPAA(true);
+        setCurrentScreen('dashboard');
+      }
+
+      // Fetch data
+      if (userData._id) {
+        Promise.all([
+          fetch(apiUrl(`/api/plans?userId=${userData._id}`)),
+          fetch(apiUrl(`/api/cases?userId=${userData._id}`))
+        ]).then(async ([plansRes, casesRes]) => {
+          if (plansRes.ok) {
+            const plans = await plansRes.json();
+            setInsurancePlans(plans);
+          }
+          if (casesRes.ok) {
+            const userCases = await casesRes.json();
+            setCases(userCases);
+          }
+        }).catch(e => console.error("Error restoring data", e));
+      }
+    }
+  }, []);
 
   // Helper to update case in both state and database
   const updateCaseInDb = async (caseId: string, updates: Partial<Case>) => {

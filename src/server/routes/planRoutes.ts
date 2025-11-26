@@ -5,6 +5,7 @@ const planRoutes = new Hono();
 
 planRoutes.get("/", planController.getPlans);
 planRoutes.post("/", planController.createPlan);
+planRoutes.patch("/:id", planController.updatePlan);
 planRoutes.delete("/:id", planController.deletePlan);
 
 export default planRoutes;

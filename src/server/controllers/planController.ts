@@ -80,3 +80,24 @@ export const deletePlan = async (c: Context) => {
     return c.json({ error: e.message }, 500);
   }
 };
+
+export const updatePlan = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const updates = await c.req.json();
+
+    const plan = await InsurancePlanModel.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { new: true }
+    );
+
+    if (!plan) {
+      return c.json({ error: "Plan not found" }, 404);
+    }
+
+    return c.json(plan);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};
