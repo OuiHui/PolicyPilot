@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AuthForm } from "./ui/auth-form";
+import { apiUrl } from "../config";
 
 type LoginProps = {
     onLogin: (user: any) => void;
@@ -14,7 +15,7 @@ export function Login({ onLogin }: LoginProps) {
         setError(null);
         if (mode === "login") {
             try {
-                const response = await fetch("http://localhost:8000/api/users/login", {
+                const response = await fetch(apiUrl("/api/users/login"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, password }),
@@ -43,7 +44,7 @@ export function Login({ onLogin }: LoginProps) {
                 const firstName = "New";
                 const lastName = "User";
 
-                const response = await fetch("http://localhost:8000/api/users", {
+                const response = await fetch(apiUrl("/api/users"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, password, firstName, lastName }),

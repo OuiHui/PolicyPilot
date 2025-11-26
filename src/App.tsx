@@ -21,6 +21,7 @@ import { SelectPlanForAppeal } from './components/SelectPlanForAppeal';
 import { DenialExtractedInfo, type DenialParsedData } from './components/DenialExtractedInfo';
 import { EmailThread } from './components/EmailThread';
 import { EditInsurancePlan } from './components/EditInsurancePlan';
+import { apiUrl } from './config';
 
 export type Screen =
   | 'login'
@@ -112,8 +113,8 @@ export default function App() {
     if (userData._id) {
       try {
         const [plansRes, casesRes] = await Promise.all([
-          fetch(`http://localhost:8000/api/plans?userId=${userData._id}`),
-          fetch(`http://localhost:8000/api/cases?userId=${userData._id}`)
+          fetch(apiUrl(`/api/plans?userId=${userData._id}`)),
+          fetch(apiUrl(`/api/cases?userId=${userData._id}`))
         ]);
 
         if (plansRes.ok) {
@@ -146,7 +147,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${user._id}`, {
+      const response = await fetch(apiUrl(`/api/users/${user._id}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hipaaAccepted: true, termsAccepted: true }),
@@ -194,7 +195,7 @@ export default function App() {
     };
 
     try {
-      const response = await fetch("http://localhost:8000/api/cases", {
+      const response = await fetch(apiUrl("/api/cases"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCaseData),
@@ -263,7 +264,7 @@ export default function App() {
     });
 
     try {
-      const response = await fetch("http://localhost:8000/api/plans", {
+      const response = await fetch(apiUrl("/api/plans"), {
         method: "POST",
         body: formData,
       });
@@ -326,7 +327,7 @@ export default function App() {
     });
 
     try {
-      const response = await fetch(`http://localhost:8000/api/cases/${currentCaseId}/files`, {
+      const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
         method: "POST",
         body: formData
       });
@@ -435,7 +436,7 @@ export default function App() {
 
   const handleDeleteCase = async (caseId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/cases/${caseId}`, {
+      const response = await fetch(apiUrl(`/api/cases/${caseId}`), {
         method: "DELETE",
       });
 
@@ -455,7 +456,7 @@ export default function App() {
 
   const handleDeletePlan = async (planId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/plans/${planId}`, {
+      const response = await fetch(apiUrl(`/api/plans/${planId}`), {
         method: "DELETE",
       });
 

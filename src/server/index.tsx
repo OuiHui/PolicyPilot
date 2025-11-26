@@ -32,7 +32,7 @@ app.get("/health", (c) => {
 // Mount API routes
 app.route("/api", api);
 
-const port = 8000;
+const port = process.env.PORT ? parseInt(process.env.PORT) : 8000;
 console.log(`Server is running on port ${port}`);
 
 serve({
