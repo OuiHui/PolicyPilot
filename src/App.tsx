@@ -22,6 +22,8 @@ import { DenialExtractedInfo, type DenialParsedData } from './components/DenialE
 import { EmailThread } from './components/EmailThread';
 import { EditInsurancePlan } from './components/EditInsurancePlan';
 import { apiUrl } from './config';
+import { uploadFileToSupabase } from './utils/supabase/storage';
+import { isSupabaseConfigured } from './utils/supabase/client';
 
 export type Screen =
   | 'login'
@@ -59,7 +61,7 @@ export type Case = {
   status: CaseStatus;
   currentStep: CaseStep;
   hasNewEmail: boolean;
-  denialFiles: File[];
+  denialFiles: (File | { name: string; size: number; type: string; bucket?: string; path?: string })[];
   parsedData: ParsedData | null;
   emailThread: EmailMessage[];
   resolved?: boolean;
@@ -104,6 +106,29 @@ export default function App() {
   } | null>(null);
 
   const getCurrentCase = () => cases.find(c => c.id === currentCaseId);
+
+  // Helper to update case in both state and database
+  const updateCaseInDb = async (caseId: string, updates: Partial<Case>) => {
+    try {
+      const response = await fetch(apiUrl(`/api/cases/${caseId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (response.ok) {
+        const updatedCase = await response.json();
+        setCases(prevCases => prevCases.map(c =>
+          c.id === caseId ? updatedCase : c
+        ));
+        return updatedCase;
+      } else {
+        console.error('Failed to update case');
+      }
+    } catch (e) {
+      console.error('Error updating case:', e);
+    }
+  };
 
   const handleLogin = async (userData: any) => {
     setUser(userData);
@@ -248,26 +273,67 @@ export default function App() {
   const handlePlanReviewConfirm = async () => {
     if (!planDraft?.policyType || !planDraft?.policyFiles || !planDraft?.planData || !planDraft?.coveredIndividuals) return;
 
-    const formData = new FormData();
-    formData.append("id", Date.now().toString());
-    formData.append("userId", user?._id || "691e93c4fd7adcd73e6f628c"); // Use real user ID
-    formData.append("insuranceCompany", planDraft.planData.insuranceCompany || "");
-    formData.append("planName", planDraft.planData.planName || "");
-    formData.append("policyNumber", planDraft.planData.policyNumber || "");
-    formData.append("groupNumber", planDraft.planData.groupNumber || "");
-    formData.append("policyType", planDraft.policyType);
-    formData.append("dateAdded", new Date().toISOString());
-    formData.append("coveredIndividuals", JSON.stringify(planDraft.coveredIndividuals || []));
-
-    planDraft.policyFiles.forEach((file) => {
-      formData.append("policyFiles[]", file);
-    });
-
     try {
-      const response = await fetch(apiUrl("/api/plans"), {
-        method: "POST",
-        body: formData,
-      });
+      let response;
+
+      if (isSupabaseConfigured) {
+        // Upload to Supabase Storage (supports 100MB+ files)
+        const uploadedFiles = await Promise.all(planDraft.policyFiles.map(async (file) => {
+          const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const path = `plans/${user?._id || 'anon'}/${Date.now()}-${cleanName}`;
+
+          await uploadFileToSupabase(file, 'policies', path);
+
+          return {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: file.lastModified,
+            bucket: 'policies',
+            path
+          };
+        }));
+
+        const payload = {
+          id: Date.now().toString(),
+          userId: user?._id || "691e93c4fd7adcd73e6f628c",
+          insuranceCompany: planDraft.planData.insuranceCompany || "",
+          planName: planDraft.planData.planName || "",
+          policyNumber: planDraft.planData.policyNumber || "",
+          groupNumber: planDraft.planData.groupNumber || "",
+          policyType: planDraft.policyType,
+          dateAdded: new Date().toISOString(),
+          coveredIndividuals: planDraft.coveredIndividuals || [],
+          policyFiles: uploadedFiles
+        };
+
+        response = await fetch(apiUrl("/api/plans"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Fallback: Direct upload (limited to 4.5MB on Vercel)
+        const formData = new FormData();
+        formData.append("id", Date.now().toString());
+        formData.append("userId", user?._id || "691e93c4fd7adcd73e6f628c");
+        formData.append("insuranceCompany", planDraft.planData.insuranceCompany || "");
+        formData.append("planName", planDraft.planData.planName || "");
+        formData.append("policyNumber", planDraft.planData.policyNumber || "");
+        formData.append("groupNumber", planDraft.planData.groupNumber || "");
+        formData.append("policyType", planDraft.policyType);
+        formData.append("dateAdded", new Date().toISOString());
+        formData.append("coveredIndividuals", JSON.stringify(planDraft.coveredIndividuals || []));
+
+        planDraft.policyFiles.forEach((file) => {
+          formData.append("policyFiles[]", file);
+        });
+
+        response = await fetch(apiUrl("/api/plans"), {
+          method: "POST",
+          body: formData,
+        });
+      }
 
       if (response.ok) {
         const savedPlan = await response.json();
@@ -321,23 +387,51 @@ export default function App() {
   const handleDenialUploadComplete = async (files: File[]) => {
     if (!currentCaseId) return;
 
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append("denialFiles[]", file);
-    });
-
     try {
-      const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
-        method: "POST",
-        body: formData
-      });
+      let response;
+
+      if (isSupabaseConfigured) {
+        // Upload to Supabase Storage (supports 100MB+ files)
+        const uploadedFiles = await Promise.all(files.map(async (file) => {
+          const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const path = `cases/${currentCaseId}/${Date.now()}-${cleanName}`;
+
+          await uploadFileToSupabase(file, 'denials', path);
+
+          return {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: file.lastModified,
+            bucket: 'denials',
+            path
+          };
+        }));
+
+        response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ denialFiles: uploadedFiles })
+        });
+      } else {
+        // Fallback: Direct upload (limited to 4.5MB on Vercel)
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append("denialFiles[]", file);
+        });
+
+        response = await fetch(apiUrl(`/api/cases/${currentCaseId}/files`), {
+          method: "POST",
+          body: formData
+        });
+      }
 
       if (response.ok) {
         const updatedCase = await response.json();
+
+        // Update the case in state with the server's response
         setCases(cases.map(c =>
-          c.id === currentCaseId
-            ? { ...c, denialFiles: files, status: 'analyzing' } // Keep local files for UI
-            : c
+          c.id === currentCaseId ? updatedCase : c
         ));
 
         // Simulate denial document analysis
@@ -356,7 +450,7 @@ export default function App() {
     }
   };
 
-  const handleDenialExtractedInfoSave = (data: DenialParsedData) => {
+  const handleDenialExtractedInfoSave = async (data: DenialParsedData) => {
     if (!currentCaseId) return;
     const currentCase = getCurrentCase();
     if (!currentCase) return;
@@ -369,11 +463,12 @@ export default function App() {
       denialReason: data.briefDescription
     };
 
-    setCases(prevCases => prevCases.map(c =>
-      c.id === currentCaseId
-        ? { ...c, parsedData, denialReasonTitle: data.briefDescription, currentStep: 'strategy', status: 'ready-to-send' }
-        : c
-    ));
+    await updateCaseInDb(currentCaseId, {
+      parsedData,
+      denialReasonTitle: data.briefDescription,
+      currentStep: 'strategy',
+      status: 'ready-to-send'
+    });
 
     setCurrentScreen('strategy');
   };
@@ -388,13 +483,17 @@ export default function App() {
     setCurrentScreen('email-review');
   };
 
-  const handleSendEmail = (message: EmailMessage) => {
+  const handleSendEmail = async (message: EmailMessage) => {
     if (!currentCaseId) return;
-    setCases(cases.map(c =>
-      c.id === currentCaseId
-        ? { ...c, emailThread: [...c.emailThread, message], status: 'awaiting-reply', currentStep: 'email-sent' }
-        : c
-    ));
+    const currentCase = getCurrentCase();
+    if (!currentCase) return;
+
+    await updateCaseInDb(currentCaseId, {
+      emailThread: [...currentCase.emailThread, message],
+      status: 'awaiting-reply',
+      currentStep: 'email-sent'
+    });
+
     setCurrentScreen('email-sent');
   };
 

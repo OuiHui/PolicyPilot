@@ -159,29 +159,26 @@ export function MyCases({
             <div className="inline-flex bg-white rounded-lg border overflow-hidden">
               <button
                 onClick={() => setFilter("all")}
-                className={`px-3 py-2 ${
-                  filter === "all" ? "bg-blue-600 text-white" : "text-gray-600"
-                }`}
+                className={`px-3 py-2 ${filter === "all" ? "bg-blue-600 text-white" : "text-gray-600"
+                  }`}
               >
                 All
               </button>
               <button
                 onClick={() => setFilter("active")}
-                className={`px-3 py-2 ${
-                  filter === "active"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600"
-                }`}
+                className={`px-3 py-2 ${filter === "active"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600"
+                  }`}
               >
                 Active
               </button>
               <button
                 onClick={() => setFilter("resolved")}
-                className={`px-3 py-2 ${
-                  filter === "resolved"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600"
-                }`}
+                className={`px-3 py-2 ${filter === "resolved"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600"
+                  }`}
               >
                 Resolved
               </button>
@@ -230,6 +227,11 @@ export function MyCases({
                       <p className="text-sm text-gray-600 mb-3 font-medium">
                         {caseItem.denialReasonTitle}
                       </p>
+                      {caseItem.denialFiles && caseItem.denialFiles.length > 0 && (
+                        <p className="text-xs text-gray-500 mb-3">
+                          📎 {caseItem.denialFiles.length} {caseItem.denialFiles.length === 1 ? 'document' : 'documents'}
+                        </p>
+                      )}
                       {caseItem.parsedData?.denialReason && caseItem.denialReasonTitle !== caseItem.parsedData.denialReason && (
                         <div className="mb-3">
                           <p className="text-xs text-gray-500 mb-1">Full Denial Reason</p>
@@ -244,8 +246,8 @@ export function MyCases({
                           <Badge className="bg-yellow-600 mb-3">
                             In Progress: {getStepText(caseItem.currentStep)}
                           </Badge>
-                          <Button 
-                            onClick={() => onResumeCase(caseItem.id)} 
+                          <Button
+                            onClick={() => onResumeCase(caseItem.id)}
                             className="w-full mt-3"
                           >
                             Resume
@@ -257,16 +259,16 @@ export function MyCases({
                             {getStatusText(caseItem.status, caseItem.resolved)}
                           </Badge>
                           <div className="space-y-2 mt-3">
-                            <Button 
-                              onClick={() => onViewCase(caseItem.id)} 
+                            <Button
+                              onClick={() => onViewCase(caseItem.id)}
                               className="w-full"
                               variant="outline"
                             >
                               View Details
                             </Button>
                             <div className="flex gap-2">
-                              <Button 
-                                onClick={() => handleResolveClick(caseItem.id)} 
+                              <Button
+                                onClick={() => handleResolveClick(caseItem.id)}
                                 className="flex-1"
                                 variant="default"
                                 size="sm"
@@ -274,8 +276,8 @@ export function MyCases({
                                 <CheckCircle2 className="w-4 h-4 mr-1" />
                                 Resolve
                               </Button>
-                              <Button 
-                                onClick={() => handleDeleteClick(caseItem.id)} 
+                              <Button
+                                onClick={() => handleDeleteClick(caseItem.id)}
                                 className="flex-1"
                                 variant="destructive"
                                 size="sm"
@@ -312,6 +314,11 @@ export function MyCases({
                       <p className="text-sm text-gray-600 mb-3 font-medium">
                         {caseItem.denialReasonTitle}
                       </p>
+                      {caseItem.denialFiles && caseItem.denialFiles.length > 0 && (
+                        <p className="text-xs text-gray-500 mb-3">
+                          📎 {caseItem.denialFiles.length} {caseItem.denialFiles.length === 1 ? 'document' : 'documents'}
+                        </p>
+                      )}
                       {caseItem.parsedData?.denialReason && caseItem.denialReasonTitle !== caseItem.parsedData.denialReason && (
                         <div className="mb-3">
                           <p className="text-xs text-gray-500 mb-1">Full Denial Reason</p>
@@ -327,15 +334,15 @@ export function MyCases({
                         </p>
                       )}
                       <div className="space-y-2 mt-3">
-                        <Button 
-                          onClick={() => onViewCase(caseItem.id)} 
+                        <Button
+                          onClick={() => onViewCase(caseItem.id)}
                           className="w-full"
                           variant="outline"
                         >
                           View Details
                         </Button>
-                        <Button 
-                          onClick={() => handleDeleteClick(caseItem.id)} 
+                        <Button
+                          onClick={() => handleDeleteClick(caseItem.id)}
                           className="w-full"
                           variant="destructive"
                           size="sm"

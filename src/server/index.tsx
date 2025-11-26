@@ -1,3 +1,4 @@
+import 'dotenv/config'; // Load .env files
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -7,6 +8,7 @@ import api from "./routes/index";
 
 // Connect to Database
 connectDB();
+
 const app = new Hono();
 
 // Enable logger

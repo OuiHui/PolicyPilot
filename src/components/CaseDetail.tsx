@@ -37,6 +37,7 @@ import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import type { Case, EmailMessage } from "../App";
 import type { InsurancePlan } from "./InsurancePlans";
+import { apiUrl } from "../config";
 
 type CaseDetailProps = {
   case: Case;
@@ -102,11 +103,41 @@ export function CaseDetail({
     setFeedback("");
   };
 
-  const handleViewFile = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setSelectedFileUrl(url);
-    setSelectedFileName(file.name);
-    setFileDialogOpen(true);
+  const handleViewFile = async (file: File | { name: string; size: number; type: string; bucket?: string; path?: string }) => {
+    try {
+      let url: string;
+      const fileName = file.name;
+
+      // Check if it's a File object or metadata
+      if (file instanceof File) {
+        // Local File object - create object URL
+        url = URL.createObjectURL(file);
+      } else if (file.bucket && file.path) {
+        // Supabase metadata - fetch signed URL
+        const response = await fetch(apiUrl('/api/files/signed-url'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucket: file.bucket, path: file.path })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get file URL');
+        }
+
+        const data = await response.json();
+        url = data.signedUrl;
+      } else {
+        console.error('Invalid file format:', file);
+        return;
+      }
+
+      setSelectedFileUrl(url);
+      setSelectedFileName(fileName);
+      setFileDialogOpen(true);
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      alert('Failed to load file. Please try again.');
+    }
   };
 
   return (
@@ -210,10 +241,9 @@ export function CaseDetail({
                       {plan.coveredIndividuals.find(
                         (p) => p.id === caseItem.coveredPersonId
                       )?.relationship &&
-                        ` (${
-                          plan.coveredIndividuals.find(
-                            (p) => p.id === caseItem.coveredPersonId
-                          )?.relationship
+                        ` (${plan.coveredIndividuals.find(
+                          (p) => p.id === caseItem.coveredPersonId
+                        )?.relationship
                         })`}
                     </p>
                   </div>
@@ -299,25 +329,24 @@ export function CaseDetail({
                 const statusIndex = caseItem.resolved
                   ? 3
                   : caseItem.status === "uploading"
-                  ? 0
-                  : caseItem.status === "analyzing"
-                  ? 1
-                  : caseItem.status === "sent" ||
-                    caseItem.status === "awaiting-reply" ||
-                    caseItem.status === "reply-received"
-                  ? 2
-                  : 1;
+                    ? 0
+                    : caseItem.status === "analyzing"
+                      ? 1
+                      : caseItem.status === "sent" ||
+                        caseItem.status === "awaiting-reply" ||
+                        caseItem.status === "reply-received"
+                        ? 2
+                        : 1;
                 const isDone = idx <= statusIndex;
                 const isActive = idx === statusIndex;
                 return (
                   <div key={stage.label} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-1">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                          isDone
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200 text-gray-600"
-                        } ${isActive ? "ring-4 ring-blue-200" : ""}`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${isDone
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 text-gray-600"
+                          } ${isActive ? "ring-4 ring-blue-200" : ""}`}
                       >
                         {isDone ? (
                           <CheckCircle2 className="w-5 h-5" />
@@ -326,18 +355,16 @@ export function CaseDetail({
                         )}
                       </div>
                       <p
-                        className={`text-sm mt-2 font-medium ${
-                          isDone ? "text-gray-900" : "text-gray-500"
-                        }`}
+                        className={`text-sm mt-2 font-medium ${isDone ? "text-gray-900" : "text-gray-500"
+                          }`}
                       >
                         {stage.label}
                       </p>
                     </div>
                     {idx < 3 && (
                       <div
-                        className={`h-1 flex-1 mx-2 ${
-                          isDone ? "bg-blue-600" : "bg-gray-200"
-                        }`}
+                        className={`h-1 flex-1 mx-2 ${isDone ? "bg-blue-600" : "bg-gray-200"
+                          }`}
                       />
                     )}
                   </div>
@@ -428,6 +455,35 @@ export function CaseDetail({
               Mark as Resolved
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Viewer Dialog */}
+      <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
+        <DialogContent
+          className="p-0"
+          style={{
+            maxWidth: '95vw',
+            width: '95vw',
+            height: '95vh',
+            maxHeight: '95vh'
+          }}
+        >
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>{selectedFileName}</DialogTitle>
+            <DialogDescription>
+              Viewing document securely with a temporary access link
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto px-6 pb-6" style={{ height: 'calc(95vh - 6rem)' }}>
+            {selectedFileUrl && (
+              <iframe
+                src={selectedFileUrl}
+                className="w-full h-full border-0"
+                title={selectedFileName || 'File viewer'}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
