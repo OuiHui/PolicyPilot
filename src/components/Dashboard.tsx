@@ -28,8 +28,8 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
     {
       number: 3,
       icon: Send,
-      title: 'Automate Your Outreach',
-      description: 'Review and send professionally crafted appeals directly from your email.'
+      title: 'Generate Your Appeal',
+      description: 'Generate and copy professionally crafted appeal letters to send from your email.'
     }
   ];
 
@@ -70,7 +70,7 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
             Challenge Your Insurance Denial with Confidence
           </div>
           <p className="text-xl text-gray-600 mb-6 max-w-2xl">
-            Navigate the complex appeals process with AI-powered guidance. We analyze your denial, 
+            Navigate the complex appeals process with AI-powered guidance. We analyze your denial,
             find conflicting policy provisions, and help you craft compelling appeals.
           </p>
           <Button onClick={onStartNewAppeal} className="px-8" size="lg">
@@ -85,8 +85,8 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">Recent Cases</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {recentCases.map((caseItem) => (
-                <Card 
-                  key={caseItem.id} 
+                <Card
+                  key={caseItem.id}
                   className="p-6 hover:shadow-lg transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -105,16 +105,16 @@ export function Dashboard({ onStartNewAppeal, cases, onViewCase, onResumeCase }:
                     {getStatusText(caseItem.status)}
                   </Badge>
                   {isIncomplete(caseItem) ? (
-                    <Button 
-                      onClick={() => onResumeCase(caseItem.id)} 
+                    <Button
+                      onClick={() => onResumeCase(caseItem.id)}
                       className="w-full mt-3"
                       variant="outline"
                     >
                       Resume
                     </Button>
                   ) : (
-                    <Button 
-                      onClick={() => onViewCase(caseItem.id)} 
+                    <Button
+                      onClick={() => onViewCase(caseItem.id)}
                       className="w-full mt-3"
                       variant="outline"
                     >

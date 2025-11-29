@@ -644,9 +644,19 @@ export default function App() {
     setCurrentScreen('reply-received');
   };
 
-  const handleViewCase = (caseId: string) => {
-    setCurrentCaseId(caseId);
-    setCurrentScreen('case-detail');
+  const handleSubmitResponse = async (response: EmailMessage) => {
+    if (!currentCaseId) return;
+    const currentCase = getCurrentCase();
+    if (!currentCase) return;
+
+    await updateCaseInDb(currentCaseId, {
+      emailThread: [...currentCase.emailThread, response],
+      status: 'reply-received',
+      currentStep: 'reply-received',
+      hasNewEmail: true
+    });
+
+    setCurrentScreen('reply-received');
   };
 
   const handleViewEmailThread = () => {
@@ -718,6 +728,11 @@ export default function App() {
     setCurrentPlanId(null);
     setPlanDraft(null);
     setCurrentScreen('login');
+  };
+
+  const handleViewCase = (caseId: string) => {
+    setCurrentCaseId(caseId);
+    setCurrentScreen('case-detail');
   };
 
   const renderScreen = () => {
@@ -805,6 +820,9 @@ export default function App() {
           onDeleteCase={handleDeleteCase}
           onResolveCase={handleResolveCase}
           onViewEmailThread={handleViewEmailThread}
+          userEmail={userEmail}
+          onSubmitResponse={handleSubmitResponse}
+          onDraftFollowup={() => setCurrentScreen('followup-review')}
         />;
 
       case 'email-thread':
@@ -842,7 +860,7 @@ export default function App() {
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
       case 'email-sent':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <EmailSent case={currentCase} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} />;
+        return <EmailSent case={currentCase} userEmail={userEmail} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} onSubmitResponse={handleSubmitResponse} />;
       case 'reply-received':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <ReplyReceived case={currentCase} onDraftFollowup={() => setCurrentScreen('followup-review')} onBack={() => setCurrentScreen('email-sent')} />;

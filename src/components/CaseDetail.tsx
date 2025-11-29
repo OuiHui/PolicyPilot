@@ -11,6 +11,9 @@ import {
   Building2,
   Users,
   Upload,
+  Send,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -49,6 +52,9 @@ type CaseDetailProps = {
   onDeleteCase: (caseId: string) => void;
   onResolveCase: (caseId: string, feedback?: string) => void;
   onViewEmailThread: () => void;
+  userEmail?: string;
+  onSubmitResponse?: (response: EmailMessage) => void;
+  onDraftFollowup?: () => void;
 };
 
 export function CaseDetail({
@@ -58,6 +64,9 @@ export function CaseDetail({
   onDeleteCase,
   onResolveCase,
   onViewEmailThread,
+  userEmail = '',
+  onSubmitResponse,
+  onDraftFollowup,
 }: CaseDetailProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
@@ -68,6 +77,9 @@ export function CaseDetail({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteFileIndex, setDeleteFileIndex] = useState<number | null>(null);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
+  const [responseText, setResponseText] = useState('');
+  const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -235,6 +247,46 @@ export function CaseDetail({
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('Failed to upload file');
+    }
+  };
+
+  const handleSubmitResponse = () => {
+    if (!responseText.trim() || !onSubmitResponse) {
+      alert('Please paste the insurance company response before submitting.');
+      return;
+    }
+
+    const response: EmailMessage = {
+      id: Date.now().toString(),
+      from: `claims@${caseItem.parsedData?.insurer.toLowerCase().replace(/\s+/g, '') || 'insurance'}.com`,
+      to: userEmail,
+      subject: 'Re: Appeal for Claim Denial',
+      body: responseText,
+      date: new Date().toISOString(),
+      type: 'received'
+    };
+
+    setSubmittingResponse(true);
+    onSubmitResponse(response);
+    setTimeout(() => {
+      setSubmittingResponse(false);
+      setResponseText('');
+    }, 500);
+  };
+
+  const handleCopyEmail = async (email: EmailMessage) => {
+    const emailText = `To: ${email.to}
+Subject: ${email.subject}
+
+${email.body}`;
+
+    try {
+      await navigator.clipboard.writeText(emailText);
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy email:', err);
+      alert('Failed to copy to clipboard.');
     }
   };
 
@@ -514,7 +566,7 @@ export function CaseDetail({
             </div>
           </Card>
 
-          {/* Email Thread */}
+          {/* Email Thread with Copy Functionality */}
           {caseItem.emailThread.length > 0 && (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -524,24 +576,90 @@ export function CaseDetail({
                     {caseItem.emailThread.length} {caseItem.emailThread.length === 1 ? 'message' : 'messages'} in thread
                   </p>
                 </div>
-                <Button onClick={onViewEmailThread} size="lg">
-                  <Mail className="w-5 h-5 mr-2" />
-                  View Email Thread
-                </Button>
+                {onDraftFollowup && (
+                  <Button onClick={onDraftFollowup} size="lg" className="bg-blue-600 hover:bg-blue-700">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Draft Follow-up
+                  </Button>
+                )}
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-gray-900 font-medium mb-1">
-                      Latest: {caseItem.emailThread[caseItem.emailThread.length - 1].subject}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {caseItem.emailThread[caseItem.emailThread.length - 1].type === 'sent' ? 'Sent' : 'Received'} on{' '}
-                      {new Date(caseItem.emailThread[caseItem.emailThread.length - 1].date).toLocaleDateString()}
-                    </p>
+
+              <div className="space-y-4">
+                {caseItem.emailThread.map((email) => (
+                  <div
+                    key={email.id}
+                    className={`rounded-lg p-4 border ${email.type === 'sent'
+                        ? 'bg-blue-50 border-blue-100 ml-8'
+                        : 'bg-white border-gray-200 mr-8'
+                      }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant={email.type === 'sent' ? 'default' : 'secondary'} className={email.type === 'sent' ? 'bg-blue-600' : ''}>
+                            {email.type === 'sent' ? 'Sent' : 'Received'}
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {new Date(email.date).toLocaleDateString()} at {new Date(email.date).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mb-1">{email.subject}</h3>
+                        <div className="text-sm text-gray-600 mb-3 whitespace-pre-wrap font-mono bg-white/50 p-2 rounded">
+                          {email.body}
+                        </div>
+                      </div>
+
+                      {email.type === 'sent' && (
+                        <Button
+                          onClick={() => handleCopyEmail(email)}
+                          variant="outline"
+                          size="sm"
+                          className="flex-shrink-0"
+                        >
+                          {copiedEmail ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Response Paste Section for Awaiting Reply */}
+          {caseItem.status === 'awaiting-reply' && onSubmitResponse && (
+            <Card className="p-6 border-2 border-blue-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Mail className="w-5 h-5 text-blue-600" />
+                <h2 className="text-gray-900">Received a Response?</h2>
+              </div>
+              <p className="text-gray-600 mb-4 text-sm">
+                When the insurance company replies to your appeal, paste their email response here to continue the process.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="response" className="text-gray-700 mb-2 block">Insurance Company Response</Label>
+                  <Textarea
+                    id="response"
+                    value={responseText}
+                    onChange={(e) => setResponseText(e.target.value)}
+                    placeholder="Paste the complete email response from your insurance company here..."
+                    className="w-full min-h-[200px] font-mono text-sm"
+                  />
                 </div>
+                <Button
+                  onClick={handleSubmitResponse}
+                  disabled={!responseText.trim() || submittingResponse}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Send className="mr-2 w-5 h-5" />
+                  {submittingResponse ? 'Submitting...' : 'Submit Response'}
+                </Button>
               </div>
             </Card>
           )}

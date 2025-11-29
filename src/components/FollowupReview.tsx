@@ -1,21 +1,12 @@
+
 import { useState } from 'react';
-import { Mail, ArrowRight, ArrowLeft, Send, Lock } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft, Copy, Check, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ProgressBar } from './ProgressBar';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from './ui/alert-dialog';
 import type { EmailMessage } from '../App';
 
 type FollowupReviewProps = {
@@ -25,15 +16,15 @@ type FollowupReviewProps = {
 };
 
 export function FollowupReview({ userEmail, onSend, onBack }: FollowupReviewProps) {
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [to, setTo] = useState('claims@healthguard.com');
   const [subject, setSubject] = useState('Re: Appeal for Claim Denial - Second Appeal');
+  const [copied, setCopied] = useState(false);
   const [body, setBody] = useState(
     `Dear Claims Department,
 
-Thank you for your recent correspondence regarding my appeal. After reviewing your response, I must respectfully note that several key policy and medical considerations outlined in my initial appeal were not directly addressed.
+  Thank you for your recent correspondence regarding my appeal.After reviewing your response, I must respectfully note that several key policy and medical considerations outlined in my initial appeal were not directly addressed.
 
-Your letter references the use of "clinical guidelines" and "evidence-based criteria" in support of your determination. However, my policy does not state that internal guidelines may override the policy definitions of medical necessity. As referenced in Section 4.B of my policy, medically necessary services are defined as those that are "appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or quality of care."
+Your letter references the use of "clinical guidelines" and "evidence-based criteria" in support of your determination.However, my policy does not state that internal guidelines may override the policy definitions of medical necessity.As referenced in Section 4.B of my policy, medically necessary services are defined as those that are "appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or quality of care."
 
 Accordingly, I am requesting clarification on the following points:
 
@@ -41,17 +32,31 @@ Accordingly, I am requesting clarification on the following points:
 2. The rationale for disregarding the medical judgment of my treating physician, who determined that the procedure was clinically necessary for my diagnosis and recovery.  
 3. Documentation or disclosure indicating where your internal review criteria were referenced or incorporated into my policy documents at the time of purchase.  
 
-In light of these concerns, I am requesting that HealthGuard conduct a second-level review of my appeal, taking into account both the policy language and the supporting medical documentation provided by my physician.
+In light of these concerns, I am requesting that HealthGuard conduct a second - level review of my appeal, taking into account both the policy language and the supporting medical documentation provided by my physician.
 
 If this matter cannot be resolved through internal review, please provide information on the process for requesting an independent external review under applicable state and federal regulations.
 
-Thank you for your continued attention to this matter. I look forward to your timely and comprehensive response.
+Thank you for your continued attention to this matter.I look forward to your timely and comprehensive response.
 
-Sincerely,
-[Your Name]`
+  Sincerely,
+  [Your Name]`
   );
 
-  const handleSend = () => {
+  const handleCopy = async () => {
+    const emailText = `To: ${to}
+Subject: ${subject}
+
+${body} `;
+    try {
+      await navigator.clipboard.writeText(emailText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleNext = () => {
     const message: EmailMessage = {
       id: Date.now().toString(),
       from: userEmail,
@@ -62,18 +67,17 @@ Sincerely,
       type: 'sent'
     };
     onSend(message);
-    setShowConfirmation(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={3} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-gray-900 mb-2">Draft Follow-up Response</h1>
           <p className="text-gray-600">
-            We've drafted a strategic follow-up that addresses the gaps in their response.
+            We've drafted a strategic follow-up. Copy this email and send it from your email client.
           </p>
         </div>
 
@@ -89,7 +93,7 @@ Sincerely,
               <Label className="text-gray-700 mb-2 block">From</Label>
               <div className="relative">
                 <Input
-                  value="policypilotco@gmail.com"
+                  value={userEmail || "your-email@example.com"}
                   disabled
                   className="w-full bg-gray-100 pr-10"
                 />
@@ -129,35 +133,40 @@ Sincerely,
           </div>
         </Card>
 
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <Button variant="outline" onClick={onBack} size="lg">
             <ArrowLeft className="mr-2 w-5 h-5" />
             Back
           </Button>
-          <Button onClick={() => setShowConfirmation(true)} size="lg" className="px-8">
-            <Send className="mr-2 w-5 h-5" />
-            Send Email
-          </Button>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCopy}
+              size="lg"
+              className="border-blue-200 hover:bg-blue-50 text-blue-700"
+            >
+              {copied ? (
+                <>
+                  <Check className="mr-2 w-5 h-5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 w-5 h-5" />
+                  Copy to Clipboard
+                </>
+              )}
+            </Button>
+
+            <Button onClick={handleNext} size="lg" className="px-8 bg-blue-600 hover:bg-blue-700">
+              Next
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Send Follow-up Email?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will send your follow-up email to {to} from {userEmail}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSend}>
-              Send Email
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
+

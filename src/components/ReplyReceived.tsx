@@ -40,7 +40,7 @@ You have the right to request an external review by an independent medical revie
 Please contact our member services department if you have any questions.
 
 Sincerely,
-${caseItem.insuranceCompany} Claims Department`,
+${caseItem.parsedData?.insurer || 'Insurance Company'} Claims Department`,
   };
 
   const analysis = [
@@ -152,7 +152,7 @@ ${caseItem.insuranceCompany} Claims Department`,
             <Badge className="bg-orange-600">Needs Response</Badge>
           </div>
           <p className="text-gray-600">
-            Hover over highlighted terms in the email to see our analysis.
+            You submitted a response from {caseItem.parsedData?.insurer || 'the insurance company'}. Hover over highlighted terms to see our analysis.
           </p>
         </div>
 
