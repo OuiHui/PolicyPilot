@@ -53,7 +53,7 @@ export function Login({ onLogin }: LoginProps) {
                 if (response.ok) {
                     const user = await response.json();
                     console.log("Signed up:", user);
-                    onLogin(email);
+                    onLogin(user);
                 } else {
                     const data = await response.json();
                     setError(data.error || "Signup failed");
@@ -67,7 +67,13 @@ export function Login({ onLogin }: LoginProps) {
 
     const handleGoogleAuth = () => {
         // Simulate OAuth login/signup
-        onLogin("user@gmail.com");
+        onLogin({
+            _id: "google-user-id",
+            email: "user@gmail.com",
+            firstName: "Google",
+            lastName: "User",
+            hipaaAccepted: false
+        });
     };
 
     const toggleMode = () => {

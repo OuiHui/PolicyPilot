@@ -128,10 +128,22 @@ export default function App() {
     const storedCaseId = localStorage.getItem('currentCaseId');
 
     if (storedUser && storedIsLoggedIn === 'true') {
-      const userData = JSON.parse(storedUser);
-      setUser(userData);
-      setUserEmail(userData.email);
-      setIsLoggedIn(true);
+      try {
+        const userData = JSON.parse(storedUser);
+        
+        // Validate user data
+        if (!userData || typeof userData !== 'object' || !userData.email) {
+          console.warn("Invalid stored user data, clearing session");
+          localStorage.removeItem('user');
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('currentScreen');
+          localStorage.removeItem('currentCaseId');
+          return;
+        }
+
+        setUser(userData);
+        setUserEmail(userData.email);
+        setIsLoggedIn(true);
 
       if (userData.hipaaAccepted) {
         setHasAcceptedHIPAA(true);
@@ -161,6 +173,11 @@ export default function App() {
             setCases(userCases);
           }
         }).catch(e => console.error("Error restoring data", e));
+      }
+      } catch (e) {
+        console.error("Error parsing stored user data", e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('isLoggedIn');
       }
     }
   }, []);
