@@ -11,6 +11,10 @@ import {
   Building2,
   Users,
   Upload,
+  Pencil,
+  X,
+  Copy,
+  Check
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -36,6 +40,8 @@ import {
 } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import type { Case, EmailMessage } from "../App";
 import type { InsurancePlan } from "./InsurancePlans";
 import { apiUrl } from "../config";
@@ -49,6 +55,11 @@ type CaseDetailProps = {
   onDeleteCase: (caseId: string) => void;
   onResolveCase: (caseId: string, feedback?: string) => void;
   onViewEmailThread: () => void;
+  userEmail?: string;
+  onSubmitResponse?: (response: EmailMessage) => void;
+  onDraftFollowup?: () => void;
+  insurancePlans?: InsurancePlan[];
+  onEditCase?: (caseId: string, updates: Partial<Case>) => Promise<void>;
 };
 
 export function CaseDetail({
@@ -58,6 +69,11 @@ export function CaseDetail({
   onDeleteCase,
   onResolveCase,
   onViewEmailThread,
+  userEmail = '',
+  onSubmitResponse,
+  onDraftFollowup,
+  insurancePlans = [],
+  onEditCase,
 }: CaseDetailProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
@@ -68,6 +84,15 @@ export function CaseDetail({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteFileIndex, setDeleteFileIndex] = useState<number | null>(null);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+
+  // Edit State
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editPlanId, setEditPlanId] = useState(caseItem.planId);
+  const [editCoveredPersonId, setEditCoveredPersonId] = useState(caseItem.coveredPersonId);
+  const [editDenialReason, setEditDenialReason] = useState(caseItem.denialReasonTitle);
+  const [editDenialFiles, setEditDenialFiles] = useState(caseItem.denialFiles);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -239,6 +264,81 @@ export function CaseDetail({
     }
   };
 
+  const handleCopyEmail = async (email: EmailMessage) => {
+    const emailText = `To: ${email.to}
+Subject: ${email.subject}
+
+${email.body}`;
+
+    try {
+      await navigator.clipboard.writeText(emailText);
+      setCopiedEmailId(email.id);
+      setTimeout(() => setCopiedEmailId(null), 3000);
+    } catch (err) {
+      console.error('Failed to copy email:', err);
+      alert('Failed to copy to clipboard.');
+    }
+  };
+
+  const handleEditClick = () => {
+    setEditPlanId(caseItem.planId);
+    setEditCoveredPersonId(caseItem.coveredPersonId);
+    setEditDenialReason(caseItem.denialReasonTitle);
+    setEditDenialFiles(caseItem.denialFiles);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onEditCase) return;
+
+    await onEditCase(caseItem.id, {
+      planId: editPlanId,
+      coveredPersonId: editCoveredPersonId,
+      denialReasonTitle: editDenialReason,
+      denialFiles: editDenialFiles
+    });
+
+    setEditDialogOpen(false);
+    window.location.reload();
+  };
+
+  const handleEditUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    const updatedFiles = [...editDenialFiles];
+
+    try {
+      for (const file of newFiles) {
+        if (isSupabaseConfigured) {
+          const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const userId = (caseItem as any).userId || 'anon';
+          const path = `denials/${userId}/${Date.now()}-${cleanName}`;
+
+          await uploadFileToSupabase(file, 'denials', path);
+          updatedFiles.push({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            bucket: 'denials',
+            path: path
+          });
+        } else {
+          updatedFiles.push(file as any);
+        }
+      }
+      setEditDenialFiles(updatedFiles);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file');
+    }
+  };
+
+  const handleRemoveEditFile = (index: number) => {
+    setEditDenialFiles(editDenialFiles.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -281,6 +381,12 @@ export function CaseDetail({
           </div>
           {!caseItem.resolved && (
             <div className="flex gap-2 mt-4">
+              {onEditCase && (
+                <Button onClick={handleEditClick} variant="outline">
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Case
+                </Button>
+              )}
               <Button onClick={handleResolveClick} variant="default">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Mark as Resolved
@@ -532,32 +638,48 @@ export function CaseDetail({
                   View Email Thread
                 </Button>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-gray-900 font-medium mb-1">
-                      Latest:{" "}
-                      {
-                        caseItem.emailThread[caseItem.emailThread.length - 1]
-                          .subject
-                      }
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {caseItem.emailThread[caseItem.emailThread.length - 1]
-                        .type === "sent"
-                        ? "Sent"
-                        : "Received"}{" "}
-                      on{" "}
-                      {new Date(
-                        caseItem.emailThread[
-                          caseItem.emailThread.length - 1
-                        ].date
-                      ).toLocaleDateString()}
-                    </p>
+              <div className="space-y-4">
+                {caseItem.emailThread.map((email) => (
+                  <div key={email.id} className={`p-4 rounded-lg border ${email.type === 'sent' ? 'bg-blue-50 border-blue-100 ml-8' : 'bg-gray-50 border-gray-200 mr-8'}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">{email.subject}</p>
+                        <p className="text-sm text-gray-600">
+                          {email.type === 'sent' ? 'To: ' : 'From: '} {email.type === 'sent' ? email.to : email.from}
+                        </p>
+                        <p className="text-xs text-gray-500">{new Date(email.date).toLocaleString()}</p>
+                      </div>
+                      {email.type === 'sent' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyEmail(email)}
+                          className="h-8"
+                        >
+                          {copiedEmailId === email.id ? (
+                            <Check className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-gray-500" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="text-gray-800 whitespace-pre-wrap text-sm">
+                      {email.body}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
+
+              {/* Draft Follow-up Button for Received Replies */}
+              {caseItem.status === 'reply-received' && onDraftFollowup && (
+                <div className="mt-4 flex justify-end">
+                  <Button onClick={onDraftFollowup} className="bg-blue-600 hover:bg-blue-700">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Draft Follow-up
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -668,6 +790,100 @@ export function CaseDetail({
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Case Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Case Details</DialogTitle>
+            <DialogDescription>
+              Update the information for this appeal case.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div>
+              <Label htmlFor="edit-plan">Insurance Plan</Label>
+              <Select value={editPlanId} onValueChange={setEditPlanId}>
+                <SelectTrigger id="edit-plan" className="mt-2">
+                  <SelectValue placeholder="Select insurance plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {insurancePlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.planName} - {p.insuranceCompany}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-person">Covered Individual</Label>
+              <Select value={editCoveredPersonId} onValueChange={setEditCoveredPersonId}>
+                <SelectTrigger id="edit-person" className="mt-2">
+                  <SelectValue placeholder="Select covered individual" />
+                </SelectTrigger>
+                <SelectContent>
+                  {insurancePlans.find(p => p.id === editPlanId)?.coveredIndividuals.map(person => (
+                    <SelectItem key={person.id} value={person.id}>{person.name} ({person.relationship})</SelectItem>
+                  )) || <SelectItem value="none" disabled>No individuals found</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-denial-reason">Denial Reason Title</Label>
+              <Input
+                id="edit-denial-reason"
+                value={editDenialReason}
+                onChange={(e) => setEditDenialReason(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Denial Documents</Label>
+                <input
+                  type="file"
+                  ref={editFileInputRef}
+                  multiple
+                  className="hidden"
+                  onChange={handleEditUpload}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <Button variant="outline" size="sm" onClick={() => editFileInputRef.current?.click()}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Add Document
+                </Button>
+              </div>
+              <div className="space-y-2 border rounded-md p-2 bg-gray-50">
+                {editDenialFiles.length > 0 ? (
+                  editDenialFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveEditFile(index)}>
+                        <X className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-2">No documents attached</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
