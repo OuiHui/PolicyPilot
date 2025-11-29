@@ -4,7 +4,11 @@
 
 Run `npm i` to install the dependencies.
 
-Run `npm run dev` to start the development server.
+Run `npm run dev:client` to start the development client.
+Run `npm run server` to start the development server on a different terminal.
+
+For windows, use `.\venv\Scripts\activate` to activate the virtual environment.
+For mac, use `source venv/bin/activate` to activate the virtual environment.
 
 ## Supabase & PostgreSQL
 

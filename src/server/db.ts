@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://huynguy127_db_user:TX01xNGeTIkCRwLH@policypilot.gdhwp2e.mongodb.net/?appName=PolicyPilot";
+dotenv.config();
+
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot";
 
 export const connectDB = async () => {
   try {

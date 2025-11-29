@@ -66,6 +66,6 @@
             "dev": "concurrently \"npm run dev:client\" \"npm run server\"",
             "dev:client": "vite",
             "build": "vite build",
-            "server": "tsx src/server/index.tsx"
+            "server": "tsx watch src/server/index.tsx"
       }
 }

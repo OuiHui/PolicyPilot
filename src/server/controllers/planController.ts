@@ -1,5 +1,9 @@
 import { Context } from "hono";
 import { InsurancePlanModel } from "../models/InsurancePlan";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import { spawn } from "child_process";
 
 export const getPlans = async (c: Context) => {
   try {
@@ -98,6 +102,92 @@ export const updatePlan = async (c: Context) => {
 
     return c.json(plan);
   } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};
+
+export const extractPlanDetails = async (c: Context) => {
+  try {
+    const body = await c.req.parseBody();
+    const files = body["files[]"];
+    const fileList = Array.isArray(files) ? files : files ? [files] : [];
+
+    if (fileList.length === 0) {
+      return c.json({ error: "No files uploaded" }, 400);
+    }
+
+    // Create temp directory
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "plan-extract-"));
+    const filePaths: string[] = [];
+
+    // Save files to temp dir
+    for (const file of fileList) {
+      if (file instanceof File) {
+        const filePath = path.join(tempDir, file.name);
+        const buffer = await file.arrayBuffer();
+        fs.writeFileSync(filePath, Buffer.from(buffer));
+        filePaths.push(filePath);
+      }
+    }
+
+    if (filePaths.length === 0) {
+      return c.json({ error: "No valid files processed" }, 400);
+    }
+
+    const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
+    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+
+    console.log(`🚀 Starting Plan Extraction for ${filePaths.length} files...`);
+
+    return new Promise((resolve, reject) => {
+      const pythonProcess = spawn(venvPythonPath, [
+        scriptPath,
+        "--mode", "extraction",
+        "--files", ...filePaths
+      ]);
+
+      let dataString = "";
+      let errorString = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        dataString += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        errorString += data.toString();
+        console.error(`[Python Stderr]: ${data}`);
+      });
+
+      pythonProcess.on("close", (code) => {
+        // Cleanup temp files
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupErr) {
+          console.error("Failed to cleanup temp dir:", cleanupErr);
+        }
+
+        if (code !== 0) {
+          console.error(`Python script exited with code ${code}`);
+          resolve(c.json({ error: "Extraction failed", details: errorString }, 500));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(dataString);
+          if (result.error) {
+            resolve(c.json({ error: result.error }, 400));
+          } else {
+            resolve(c.json(result));
+          }
+        } catch (e) {
+          console.error("Failed to parse Python output:", dataString);
+          resolve(c.json({ error: "Invalid response from extraction engine" }, 500));
+        }
+      });
+    }) as Promise<Response>;
+
+  } catch (e: any) {
+    console.error('❌ Error extracting plan details:', e);
     return c.json({ error: e.message }, 500);
   }
 };

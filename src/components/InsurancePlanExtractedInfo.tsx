@@ -30,14 +30,6 @@ export function InsurancePlanExtractedInfo({
   onSave,
   onBack,
 }: InsurancePlanExtractedInfoProps) {
-  const [insuranceCompany, setInsuranceCompany] = useState(
-    data.insuranceCompany
-  );
-  const [customInsurer, setCustomInsurer] = useState("");
-  const [planName, setPlanName] = useState(data.planName);
-  const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
-  const [groupNumber, setGroupNumber] = useState(data.groupNumber || "");
-
   const commonInsurers = [
     "UnitedHealthcare",
     "Anthem Blue Cross Blue Shield",
@@ -50,6 +42,27 @@ export function InsurancePlanExtractedInfo({
     "Centene",
     "Other",
   ];
+
+  // Check if extracted company matches any common insurers
+  const isCommonInsurer = commonInsurers.some(
+    insurer => insurer.toLowerCase() === data.insuranceCompany.toLowerCase() || 
+    (insurer !== "Other" && data.insuranceCompany.toLowerCase().includes(insurer.toLowerCase()))
+  );
+
+  const matchedInsurer = commonInsurers.find(
+    insurer => insurer.toLowerCase() === data.insuranceCompany.toLowerCase() ||
+    (insurer !== "Other" && data.insuranceCompany.toLowerCase().includes(insurer.toLowerCase()))
+  );
+
+  const [insuranceCompany, setInsuranceCompany] = useState(
+    matchedInsurer || "Other"
+  );
+  const [customInsurer, setCustomInsurer] = useState(
+    matchedInsurer ? "" : data.insuranceCompany
+  );
+  const [planName, setPlanName] = useState(data.planName);
+  const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
+  const [groupNumber, setGroupNumber] = useState(data.groupNumber || "");
 
   const handleSave = () => {
     onSave({
