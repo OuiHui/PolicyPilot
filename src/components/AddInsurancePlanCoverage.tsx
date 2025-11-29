@@ -100,12 +100,13 @@ export function AddInsurancePlanCoverage({
                           type="date"
                           value={person.dateOfBirth}
                           onChange={(e) => updateCoveredPerson(person.id, 'dateOfBirth', e.target.value)}
+                          className="no-calendar-picker"
                         />
                       </div>
                     </div>
                     <div>
                       <Label>Relationship *</Label>
-                      <Select 
+                      <Select
                         value={person.relationship}
                         onValueChange={(value) => updateCoveredPerson(person.id, 'relationship', value)}
                       >
@@ -135,8 +136,8 @@ export function AddInsurancePlanCoverage({
               </Card>
             ))}
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={addCoveredPerson}
             >

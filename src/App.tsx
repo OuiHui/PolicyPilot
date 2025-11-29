@@ -130,7 +130,7 @@ export default function App() {
     if (storedUser && storedIsLoggedIn === 'true') {
       try {
         const userData = JSON.parse(storedUser);
-        
+
         // Validate user data
         if (!userData || typeof userData !== 'object' || !userData.email) {
           console.warn("Invalid stored user data, clearing session");
@@ -145,35 +145,35 @@ export default function App() {
         setUserEmail(userData.email);
         setIsLoggedIn(true);
 
-      if (userData.hipaaAccepted) {
-        setHasAcceptedHIPAA(true);
-        if (storedScreen) {
-          setCurrentScreen(storedScreen as Screen);
-        } else {
-          setCurrentScreen('dashboard');
+        if (userData.hipaaAccepted) {
+          setHasAcceptedHIPAA(true);
+          if (storedScreen) {
+            setCurrentScreen(storedScreen as Screen);
+          } else {
+            setCurrentScreen('dashboard');
+          }
+
+          if (storedCaseId) {
+            setCurrentCaseId(storedCaseId);
+          }
         }
 
-        if (storedCaseId) {
-          setCurrentCaseId(storedCaseId);
+        // Fetch data
+        if (userData._id) {
+          Promise.all([
+            fetch(apiUrl(`/api/plans?userId=${userData._id}`)),
+            fetch(apiUrl(`/api/cases?userId=${userData._id}`))
+          ]).then(async ([plansRes, casesRes]) => {
+            if (plansRes.ok) {
+              const plans = await plansRes.json();
+              setInsurancePlans(plans);
+            }
+            if (casesRes.ok) {
+              const userCases = await casesRes.json();
+              setCases(userCases);
+            }
+          }).catch(e => console.error("Error restoring data", e));
         }
-      }
-
-      // Fetch data
-      if (userData._id) {
-        Promise.all([
-          fetch(apiUrl(`/api/plans?userId=${userData._id}`)),
-          fetch(apiUrl(`/api/cases?userId=${userData._id}`))
-        ]).then(async ([plansRes, casesRes]) => {
-          if (plansRes.ok) {
-            const plans = await plansRes.json();
-            setInsurancePlans(plans);
-          }
-          if (casesRes.ok) {
-            const userCases = await casesRes.json();
-            setCases(userCases);
-          }
-        }).catch(e => console.error("Error restoring data", e));
-      }
       } catch (e) {
         console.error("Error parsing stored user data", e);
         localStorage.removeItem('user');
@@ -683,6 +683,10 @@ export default function App() {
     setCurrentScreen("email-thread");
   };
 
+  const handleEditCase = async (caseId: string, updates: Partial<Case>) => {
+    await updateCaseInDb(caseId, updates);
+  };
+
   const handleResumeCase = (caseId: string) => {
     const caseToResume = cases.find((c) => c.id === caseId);
     if (!caseToResume) return;
@@ -759,22 +763,22 @@ export default function App() {
       case "hipaa-consent":
         return <HIPAAConsent onAccept={handleHIPAAAccept} />;
       case 'dashboard':
-        return <Dashboard 
-          onStartNewAppeal={handleStartNewAppeal} 
-          cases={cases} 
+        return <Dashboard
+          onStartNewAppeal={handleStartNewAppeal}
+          cases={cases}
           insurancePlans={insurancePlans}
-          onViewCase={handleViewCase} 
-          onResumeCase={handleResumeCase} 
+          onViewCase={handleViewCase}
+          onResumeCase={handleResumeCase}
         />;
       case 'my-cases':
-        return <MyCases 
-          cases={cases} 
+        return <MyCases
+          cases={cases}
           insurancePlans={insurancePlans}
-          onViewCase={handleViewCase} 
-          onResumeCase={handleResumeCase} 
-          onStartNew={handleStartNewAppeal} 
-          onDeleteCase={handleDeleteCase} 
-          onResolveCase={handleResolveCase} 
+          onViewCase={handleViewCase}
+          onResumeCase={handleResumeCase}
+          onStartNew={handleStartNewAppeal}
+          onDeleteCase={handleDeleteCase}
+          onResolveCase={handleResolveCase}
         />;
 
       // Insurance Plans Management
@@ -849,6 +853,8 @@ export default function App() {
           onDeleteCase={handleDeleteCase}
           onResolveCase={handleResolveCase}
           onViewEmailThread={handleViewEmailThread}
+          insurancePlans={insurancePlans}
+          onEditCase={handleEditCase}
         />;
 
       case 'email-thread':
@@ -884,18 +890,6 @@ export default function App() {
       case 'email-review':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
-      case 'email-sent':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <EmailSent case={currentCase} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} />;
-      case 'reply-received':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <ReplyReceived case={currentCase} onDraftFollowup={() => setCurrentScreen('followup-review')} onBack={() => setCurrentScreen('email-sent')} />;
-      case 'followup-review':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <FollowupReview userEmail={userEmail} onSend={handleSendEmail} onBack={() => setCurrentScreen('reply-received')} />;
-      case 'settings':
-        return <Settings userEmail={userEmail} onLogout={handleLogout} />;
-      default:
         return <Login onLogin={handleLogin} />;
     }
   };
