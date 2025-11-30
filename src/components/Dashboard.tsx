@@ -178,11 +178,7 @@ export function Dashboard({
                         }`}
                     />
                     <div className="flex gap-2">
-                      {caseItem.hasNewEmail && !caseItem.resolved && (
-                        <Badge variant="destructive" className="animate-pulse">
-                          New
-                        </Badge>
-                      )}
+                      {/* New badge removed */}
                       <Badge className={getStatusColor(caseItem.status)}>
                         {getStatusText(caseItem.status)}
                       </Badge>

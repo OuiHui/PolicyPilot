@@ -821,6 +821,9 @@ export default function App() {
           onResolveCase={handleResolveCase}
         />;
 
+      case 'settings':
+        return <Settings userEmail={userEmail} onLogout={handleLogout} />;
+
       // Insurance Plans Management
       case 'insurance-plans':
         return <InsurancePlans
