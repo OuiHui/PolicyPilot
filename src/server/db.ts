@@ -11,7 +11,8 @@ export const connectDB = async () => {
       return;
     }
     await mongoose.connect(MONGODB_URI);
-    console.log("Connected to MongoDB");
+    const dbName = mongoose.connection.db?.databaseName || 'unknown';
+    console.log(`Connected to MongoDB - Database: ${dbName}`);
   } catch (error) {
     console.error("MongoDB connection error:", error);
     process.exit(1);

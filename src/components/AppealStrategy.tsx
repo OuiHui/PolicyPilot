@@ -24,14 +24,18 @@ type HighlightedTerm = {
 type RAGAnalysisResult = {
   analysis: string;
   terms: { term: string; definition: string }[];
-  emailDraft: { subject: string; body: string };
   contextUsed: string[];
+};
+
+type EmailDraftResult = {
+  emailDraft: { subject: string; body: string };
 };
 
 export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBack }: AppealStrategyProps) {
   const [hoveredTerm, setHoveredTerm] = useState<HighlightedTerm | null>(null);
   const [analysisResult, setAnalysisResult] = useState<RAGAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,15 +126,36 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
     );
   };
 
-  const handleDraft = () => {
-    if (analysisResult?.emailDraft) {
-      onDraftEmail(analysisResult.emailDraft);
-    } else {
-        // Fallback
-        onDraftEmail({
-            subject: `Appeal for Claim Denial - Policy #${parsedData.policyNumber}`,
-            body: "Error generating draft."
-        });
+  const handleDraft = async () => {
+    try {
+      setIsGeneratingEmail(true);
+      setError(null);
+      
+      const response = await fetch(apiUrl(`/api/cases/${caseId}/generate-email?userId=${userId}`), {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate email draft');
+      }
+
+      const data: EmailDraftResult = await response.json();
+      
+      if (data.emailDraft) {
+        onDraftEmail(data.emailDraft);
+      } else {
+        throw new Error('No email draft in response');
+      }
+    } catch (err) {
+      console.error("Error generating email:", err);
+      setError("Failed to generate email draft. Please try again.");
+      // Fallback
+      onDraftEmail({
+        subject: `Appeal for Claim Denial - Policy #${parsedData.policyNumber}`,
+        body: "Error generating draft. Please try again."
+      });
+    } finally {
+      setIsGeneratingEmail(false);
     }
   };
 
@@ -254,9 +279,23 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
               <ArrowLeft className="mr-2 w-5 h-5" />
               Back
             </Button>
-            <Button onClick={handleDraft} size="lg" className="px-8">
-              Review Email Draft
-              <ArrowRight className="ml-2 w-5 h-5" />
+            <Button 
+              onClick={handleDraft} 
+              size="lg" 
+              className="px-8"
+              disabled={isGeneratingEmail}
+            >
+              {isGeneratingEmail ? (
+                <>
+                  <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                  Generating Email...
+                </>
+              ) : (
+                <>
+                  Review Email Draft
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+              )}
             </Button>
           </div>
         </div>

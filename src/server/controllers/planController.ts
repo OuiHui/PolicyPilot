@@ -139,12 +139,24 @@ export const extractPlanDetails = async (c: Context) => {
 
     console.log(`🚀 Starting Plan Extraction for ${filePaths.length} files...`);
 
+    // Prepare environment variables for Python process
+    const pythonEnv = {
+      ...process.env,
+      MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    };
+
     return new Promise((resolve, reject) => {
       const pythonProcess = spawn(venvPythonPath, [
         scriptPath,
         "--mode", "extraction",
         "--files", ...filePaths
-      ]);
+      ], {
+        env: pythonEnv,
+        cwd: process.cwd() // Ensure working directory is project root
+      });
 
       let dataString = "";
       let errorString = "";
