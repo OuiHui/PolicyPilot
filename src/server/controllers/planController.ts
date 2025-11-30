@@ -135,9 +135,21 @@ export const extractPlanDetails = async (c: Context) => {
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
-    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+    // Determine Python executable path
+    let pythonPath = "python"; // Default to system python
+    if (process.platform === "win32") {
+      const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    } else {
+      const venvPath = path.join(process.cwd(), "venv", "bin", "python");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    }
 
-    console.log(`🚀 Starting Plan Extraction for ${filePaths.length} files...`);
+    console.log(`🚀 Starting Plan Extraction for ${filePaths.length} files using ${pythonPath}...`);
 
     // Prepare environment variables for Python process
     const pythonEnv = {
@@ -149,13 +161,25 @@ export const extractPlanDetails = async (c: Context) => {
     };
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(venvPythonPath, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         "--mode", "extraction",
         "--files", ...filePaths
       ], {
         env: pythonEnv,
         cwd: process.cwd() // Ensure working directory is project root
+      });
+
+      // CRITICAL: Handle spawn errors (like ENOENT) to prevent server crash
+      pythonProcess.on('error', (err) => {
+        console.error('❌ Failed to start Python process:', err);
+        // Cleanup temp files on error
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupErr) {
+          console.error("Failed to cleanup temp dir:", cleanupErr);
+        }
+        resolve(c.json({ error: "Failed to start extraction engine. Please check Python installation.", details: err.message }, 500));
       });
 
       let dataString = "";

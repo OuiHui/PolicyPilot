@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, ArrowLeft, FileText, Info } from "lucide-react";
+import { ArrowRight, ArrowLeft, FileText, Info, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Textarea } from "./ui/textarea";
@@ -15,6 +15,7 @@ type DenialExtractedInfoProps = {
   policyNumber: string;
   onSave: (data: DenialParsedData) => void;
   onBack: () => void;
+  onDelete?: () => void;
 };
 
 export function DenialExtractedInfo({
@@ -23,6 +24,7 @@ export function DenialExtractedInfo({
   policyNumber,
   onSave,
   onBack,
+  onDelete,
 }: DenialExtractedInfoProps) {
   const [briefDescription, setBriefDescription] = useState(
     data.briefDescription
@@ -105,11 +107,19 @@ export function DenialExtractedInfo({
           </p>
         </div>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} size="lg">
-            <ArrowLeft className="mr-2 w-5 h-5" />
-            Back
-          </Button>
+        <div className="flex justify-between items-center">
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onBack} size="lg">
+              <ArrowLeft className="mr-2 w-5 h-5" />
+              Back
+            </Button>
+            {onDelete && (
+              <Button variant="destructive" onClick={onDelete} size="lg">
+                <Trash2 className="mr-2 w-5 h-5" />
+                Delete Case
+              </Button>
+            )}
+          </div>
           <Button
             onClick={handleSave}
             disabled={!briefDescription}

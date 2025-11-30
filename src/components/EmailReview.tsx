@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, ArrowRight, ArrowLeft, Lock, Send } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft, Lock, Send, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -23,13 +23,14 @@ type EmailReviewProps = {
   parsedData: ParsedData;
   onSend: (message: EmailMessage) => void;
   onBack: () => void;
+  onDelete?: () => void;
 };
 
-export function EmailReview({ userEmail, parsedData, onSend, onBack }: EmailReviewProps) {
+export function EmailReview({ userEmail, parsedData, onSend, onBack, onDelete }: EmailReviewProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [to, setTo] = useState('claims@' + parsedData.insurer.toLowerCase().replace(/\s+/g, '') + '.com');
   const [subject, setSubject] = useState(`Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
-  
+
   const progressSteps = [
     "Choose Plan",
     "Upload Documents",
@@ -77,7 +78,7 @@ Sincerely,
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={3} steps={progressSteps} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-gray-900 mb-2">Draft Your Initial Email</h1>
@@ -97,17 +98,17 @@ Sincerely,
             <div>
               <Label className="text-gray-700 mb-2 block">From</Label>
               <div className="relative">
-              <Input
-                id="from"
-                type="email"
-                value="policypilotco@gmail.com"
-                disabled
-                className="w-full bg-gray-100 pr-10"
-              />
-              <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  id="from"
+                  type="email"
+                  value="policypilotco@gmail.com"
+                  disabled
+                  className="w-full bg-gray-100 pr-10"
+                />
+                <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
               <p className="text-gray-500 mt-1">
-              Email will be sent from policypilotco@gmail.com
+                Email will be sent from policypilotco@gmail.com
               </p>
             </div>
 
@@ -150,11 +151,19 @@ Sincerely,
           </div>
         </Card>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={onBack} size="lg">
-            <ArrowLeft className="mr-2 w-5 h-5" />
-            Back
-          </Button>
+        <div className="flex justify-between items-center">
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onBack} size="lg">
+              <ArrowLeft className="mr-2 w-5 h-5" />
+              Back
+            </Button>
+            {onDelete && (
+              <Button variant="destructive" onClick={onDelete} size="lg">
+                <Trash2 className="mr-2 w-5 h-5" />
+                Delete Case
+              </Button>
+            )}
+          </div>
           <Button onClick={() => setShowConfirmation(true)} size="lg" className="px-8">
             <Send className="mr-2 w-5 h-5" />
             Send Email
@@ -168,7 +177,7 @@ Sincerely,
           <AlertDialogHeader>
             <AlertDialogTitle>Send Appeal Email?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send your appeal email to {to} from {userEmail}. 
+              This will send your appeal email to {to} from {userEmail}.
               Make sure you've reviewed all the details carefully.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -142,9 +142,21 @@ export const analyzeCase = async (c: Context) => {
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
-    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+    // Determine Python executable path
+    let pythonPath = "python"; // Default to system python
+    if (process.platform === "win32") {
+      const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    } else {
+      const venvPath = path.join(process.cwd(), "venv", "bin", "python");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    }
 
-    console.log(`🚀 Starting RAG analysis for case ${id}...`);
+    console.log(`🚀 Starting RAG analysis for case ${id} using ${pythonPath}...`);
 
     // Prepare environment variables for Python process
     const pythonEnv = {
@@ -156,13 +168,19 @@ export const analyzeCase = async (c: Context) => {
     };
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(venvPythonPath, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         "--caseId", id,
         "--userId", userId
       ], {
         env: pythonEnv,
         cwd: process.cwd() // Ensure working directory is project root
+      });
+
+      // CRITICAL: Handle spawn errors (like ENOENT) to prevent server crash
+      pythonProcess.on('error', (err) => {
+        console.error('❌ Failed to start Python process:', err);
+        resolve(c.json({ error: "Failed to start analysis engine. Please check Python installation.", details: err.message }, 500));
       });
 
       let dataString = "";
@@ -214,9 +232,21 @@ export const generateEmail = async (c: Context) => {
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
-    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+    // Determine Python executable path
+    let pythonPath = "python"; // Default to system python
+    if (process.platform === "win32") {
+      const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    } else {
+      const venvPath = path.join(process.cwd(), "venv", "bin", "python");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    }
 
-    console.log(`🚀 Starting Email Generation for case ${id}...`);
+    console.log(`🚀 Starting Email Generation for case ${id} using ${pythonPath}...`);
 
     // Prepare environment variables for Python process
     const pythonEnv = {
@@ -228,7 +258,7 @@ export const generateEmail = async (c: Context) => {
     };
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(venvPythonPath, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         "--mode", "email_draft",
         "--caseId", id,
@@ -240,6 +270,12 @@ export const generateEmail = async (c: Context) => {
 
       let dataString = "";
       let errorString = "";
+
+      // CRITICAL: Handle spawn errors (like ENOENT) to prevent server crash
+      pythonProcess.on('error', (err) => {
+        console.error('❌ Failed to start Python process:', err);
+        resolve(c.json({ error: "Failed to start analysis engine. Please check Python installation.", details: err.message }, 500));
+      });
 
       pythonProcess.stdout.on("data", (data) => {
         dataString += data.toString();
@@ -280,7 +316,7 @@ export const generateEmail = async (c: Context) => {
 export const extractDenial = async (c: Context) => {
   try {
     const id = c.req.param("id");
-    
+
     // Get case to find denial files
     const caseData = await CaseModel.findOne({ id });
     if (!caseData) {
@@ -314,7 +350,7 @@ export const extractDenial = async (c: Context) => {
         try {
           const bucket = fileData.bucket || "denials";
           console.log(`📥 Downloading file from Supabase: ${bucket}/${fileData.path}`);
-          
+
           const { data, error } = await supabaseServer.storage
             .from(bucket)
             .download(fileData.path);
@@ -343,9 +379,21 @@ export const extractDenial = async (c: Context) => {
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
-    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+    // Determine Python executable path
+    let pythonPath = "python"; // Default to system python
+    if (process.platform === "win32") {
+      const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    } else {
+      const venvPath = path.join(process.cwd(), "venv", "bin", "python");
+      if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+      }
+    }
 
-    console.log(`🚀 Starting Denial Extraction for case ${id} with ${filePaths.length} files...`);
+    console.log(`🚀 Starting Denial Extraction for case ${id} with ${filePaths.length} files using ${pythonPath}...`);
 
     // Prepare environment variables for Python process
     const pythonEnv = {
@@ -357,13 +405,25 @@ export const extractDenial = async (c: Context) => {
     };
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(venvPythonPath, [
+      const pythonProcess = spawn(pythonPath, [
         scriptPath,
         "--mode", "denial_extract",
         "--files", ...filePaths
       ], {
         env: pythonEnv,
         cwd: process.cwd() // Ensure working directory is project root
+      });
+
+      // CRITICAL: Handle spawn errors (like ENOENT) to prevent server crash
+      pythonProcess.on('error', (err) => {
+        console.error('❌ Failed to start Python process:', err);
+        // Cleanup temp files on error
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupErr) {
+          console.error("Failed to cleanup temp dir:", cleanupErr);
+        }
+        resolve(c.json({ error: "Failed to start extraction engine. Please check Python installation.", details: err.message }, 500));
       });
 
       let dataString = "";

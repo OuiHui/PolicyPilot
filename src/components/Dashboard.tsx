@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Shield,
   Upload,
@@ -5,10 +6,21 @@ import {
   Send,
   ArrowRight,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import type { Case } from "../App";
 
 type DashboardProps = {
@@ -17,6 +29,7 @@ type DashboardProps = {
   insurancePlans: any[];
   onViewCase: (caseId: string) => void;
   onResumeCase: (caseId: string) => void;
+  onDeleteCase: (caseId: string) => void;
 };
 
 export function Dashboard({
@@ -25,7 +38,10 @@ export function Dashboard({
   insurancePlans,
   onViewCase,
   onResumeCase,
+  onDeleteCase,
 }: DashboardProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const steps = [
     {
       number: 1,
@@ -111,6 +127,19 @@ export function Dashboard({
     }
   };
 
+  const handleDeleteClick = (caseId: string) => {
+    setSelectedCaseId(caseId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedCaseId) {
+      onDeleteCase(selectedCaseId);
+      setDeleteDialogOpen(false);
+      setSelectedCaseId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -140,15 +169,13 @@ export function Dashboard({
               {recentCases.map((caseItem) => (
                 <Card
                   key={caseItem.id}
-                  className={`p-6 hover:shadow-lg transition-shadow ${
-                    caseItem.resolved ? "bg-gray-50" : ""
-                  }`}
+                  className={`p-6 hover:shadow-lg transition-shadow ${caseItem.resolved ? "bg-gray-50" : ""
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <FileText
-                      className={`w-8 h-8 ${
-                        caseItem.resolved ? "text-gray-400" : "text-blue-600"
-                      }`}
+                      className={`w-8 h-8 ${caseItem.resolved ? "text-gray-400" : "text-blue-600"
+                        }`}
                     />
                     <div className="flex gap-2">
                       {caseItem.hasNewEmail && !caseItem.resolved && (
@@ -202,21 +229,47 @@ export function Dashboard({
                       <Badge className="bg-yellow-600 mb-3 w-full justify-center">
                         In Progress: {caseItem.currentStep}
                       </Badge>
-                      <Button
-                        onClick={() => onResumeCase(caseItem.id)}
-                        className="w-full"
-                      >
-                        Resume
-                      </Button>
+                      <div className="space-y-2">
+                        <Button
+                          onClick={() => onResumeCase(caseItem.id)}
+                          className="w-full"
+                        >
+                          Resume
+                        </Button>
+                        {!caseItem.resolved && (
+                          <Button
+                            onClick={() => handleDeleteClick(caseItem.id)}
+                            className="w-full"
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </>
                   ) : (
-                    <Button
-                      onClick={() => onViewCase(caseItem.id)}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      View Details
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => onViewCase(caseItem.id)}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        View Details
+                      </Button>
+                      {!caseItem.resolved && (
+                        <Button
+                          onClick={() => handleDeleteClick(caseItem.id)}
+                          className="w-full"
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </Card>
               ))}
@@ -250,6 +303,28 @@ export function Dashboard({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Case?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this
+              case and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

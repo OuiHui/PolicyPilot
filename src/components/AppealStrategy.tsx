@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, AlertCircle, CheckCircle, ArrowRight, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
+import { Lightbulb, AlertCircle, CheckCircle, ArrowRight, ArrowLeft, MessageCircle, Loader2, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -13,6 +13,7 @@ type AppealStrategyProps = {
   parsedData: ParsedData;
   onDraftEmail: (draft: { subject: string; body: string }) => void;
   onBack: () => void;
+  onDelete?: () => void;
 };
 
 type HighlightedTerm = {
@@ -31,7 +32,7 @@ type EmailDraftResult = {
   emailDraft: { subject: string; body: string };
 };
 
-export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBack }: AppealStrategyProps) {
+export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBack, onDelete }: AppealStrategyProps) {
   const [hoveredTerm, setHoveredTerm] = useState<HighlightedTerm | null>(null);
   const [analysisResult, setAnalysisResult] = useState<RAGAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,18 +85,18 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
     // This highlighting logic assumes 'text' is the raw context and 'highlights' are terms found in it.
     // However, the RAG output gives us 'analysis' text and 'terms'. The terms might be in the analysis or the context.
     // Let's try to highlight terms within the analysis text.
-    
+
     highlights.forEach(({ term, definition }) => {
       const index = result.toLowerCase().indexOf(term.toLowerCase(), lastIndex);
       if (index !== -1) {
         if (index > lastIndex) {
           parts.push({ text: result.substring(lastIndex, index), isHighlight: false });
         }
-        parts.push({ 
-          text: result.substring(index, index + term.length), 
+        parts.push({
+          text: result.substring(index, index + term.length),
           isHighlight: true,
           term,
-          definition 
+          definition
         });
         lastIndex = index + term.length;
       }
@@ -107,7 +108,7 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
 
     return (
       <>
-        {parts.map((part, index) => 
+        {parts.map((part, index) =>
           part.isHighlight ? (
             <span
               key={index}
@@ -130,7 +131,7 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
     try {
       setIsGeneratingEmail(true);
       setError(null);
-      
+
       const response = await fetch(apiUrl(`/api/cases/${caseId}/generate-email?userId=${userId}`), {
         method: 'POST',
       });
@@ -140,7 +141,7 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
       }
 
       const data: EmailDraftResult = await response.json();
-      
+
       if (data.emailDraft) {
         onDraftEmail(data.emailDraft);
       } else {
@@ -190,7 +191,7 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={2} steps={progressSteps} />
-      
+
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-gray-900 mb-2">Your Appeal Strategy Analysis</h1>
@@ -218,26 +219,26 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
           {/* Key Terms */}
           {analysisResult.terms.length > 0 && (
             <Card className="p-6 relative">
-                <div className="flex items-start gap-3 mb-4">
+              <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
                 </div>
                 <div className="flex-1">
-                    <h2 className="text-gray-900 mb-2">Key Terms Explained</h2>
-                    <div className="flex items-center gap-2 text-gray-600">
+                  <h2 className="text-gray-900 mb-2">Key Terms Explained</h2>
+                  <div className="flex items-center gap-2 text-gray-600">
                     <MessageCircle className="w-4 h-4" />
                     <span>Hover over highlighted terms in the analysis above or review below</span>
-                    </div>
+                  </div>
                 </div>
-                </div>
-                <div className="pl-13 space-y-4">
-                    {analysisResult.terms.map((term, idx) => (
-                        <div key={idx} className="bg-gray-50 p-3 rounded-lg">
-                            <span className="font-semibold text-gray-900">{term.term}:</span>
-                            <span className="text-gray-700 ml-2">{term.definition}</span>
-                        </div>
-                    ))}
-                </div>
+              </div>
+              <div className="pl-13 space-y-4">
+                {analysisResult.terms.map((term, idx) => (
+                  <div key={idx} className="bg-gray-50 p-3 rounded-lg">
+                    <span className="font-semibold text-gray-900">{term.term}:</span>
+                    <span className="text-gray-700 ml-2">{term.definition}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 
@@ -274,14 +275,22 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={onBack} size="lg">
-              <ArrowLeft className="mr-2 w-5 h-5" />
-              Back
-            </Button>
-            <Button 
-              onClick={handleDraft} 
-              size="lg" 
+          <div className="flex justify-between items-center">
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onBack} size="lg">
+                <ArrowLeft className="mr-2 w-5 h-5" />
+                Back
+              </Button>
+              {onDelete && (
+                <Button variant="destructive" onClick={onDelete} size="lg">
+                  <Trash2 className="mr-2 w-5 h-5" />
+                  Delete Case
+                </Button>
+              )}
+            </div>
+            <Button
+              onClick={handleDraft}
+              size="lg"
               className="px-8"
               disabled={isGeneratingEmail}
             >

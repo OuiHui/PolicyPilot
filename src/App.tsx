@@ -808,6 +808,7 @@ export default function App() {
           insurancePlans={insurancePlans}
           onViewCase={handleViewCase}
           onResumeCase={handleResumeCase}
+          onDeleteCase={handleDeleteCase}
         />;
       case 'my-cases':
         return <MyCases
@@ -883,7 +884,7 @@ export default function App() {
 
       // Case Details and Management
       case 'case-detail':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
         const casePlan = insurancePlans.find(p => p.id === currentCase.planId);
         return <CaseDetail
           case={currentCase}
@@ -897,7 +898,7 @@ export default function App() {
         />;
 
       case 'email-thread':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
         return <EmailThread
           emailThread={currentCase.emailThread}
           userEmail={userEmail}
@@ -906,7 +907,7 @@ export default function App() {
 
       // Appeal Creation Flow
       case 'denial-upload':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
         return <DenialUpload
           initialFiles={currentCase.denialFiles}
           onContinue={handleDenialUploadComplete}
@@ -914,7 +915,7 @@ export default function App() {
           onDelete={() => handleDeleteCase(currentCase.id)}
         />;
       case 'denial-extracted-info':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
         if (isExtractingDenial) {
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -933,19 +934,21 @@ export default function App() {
           policyNumber={plan?.policyNumber || 'Unknown'}
           onSave={handleDenialExtractedInfoSave}
           onBack={() => setCurrentScreen('denial-upload')}
+          onDelete={() => handleDeleteCase(currentCase.id)}
         />;
       case 'strategy':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <AppealStrategy 
-        caseId={currentCase.id}
-        userId={user?._id}
-        parsedData={currentCase.parsedData}
-        onDraftEmail={handleDraftEmail}
-        onBack={() => setCurrentScreen('denial-extracted-info')}
-      />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        return <AppealStrategy
+          caseId={currentCase.id}
+          userId={user?._id}
+          parsedData={currentCase.parsedData}
+          onDraftEmail={handleDraftEmail}
+          onBack={() => setCurrentScreen('denial-extracted-info')}
+          onDelete={() => handleDeleteCase(currentCase.id)}
+        />;
       case 'email-review':
-        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
+        if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} onDelete={() => handleDeleteCase(currentCase.id)} />;
         return <Login onLogin={handleLogin} />;
     }
   };

@@ -111,8 +111,8 @@ export function MyCases({
     filter === "active"
       ? activeCases
       : filter === "resolved"
-      ? resolvedCases
-      : cases;
+        ? resolvedCases
+        : cases;
 
   const getStepText = (step: Case["currentStep"]) => {
     switch (step) {
@@ -238,15 +238,13 @@ export function MyCases({
             {filteredCases.map((caseItem) => (
               <Card
                 key={caseItem.id}
-                className={`p-6 hover:shadow-lg transition-shadow ${
-                  caseItem.resolved ? "bg-gray-50" : ""
-                }`}
+                className={`p-6 hover:shadow-lg transition-shadow ${caseItem.resolved ? "bg-gray-50" : ""
+                  }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <FileText
-                    className={`w-8 h-8 ${
-                      caseItem.resolved ? "text-gray-400" : "text-blue-600"
-                    }`}
+                    className={`w-8 h-8 ${caseItem.resolved ? "text-gray-400" : "text-blue-600"
+                      }`}
                   />
                   <div className="flex gap-2">
                     {caseItem.hasNewEmail && !caseItem.resolved && (
@@ -303,12 +301,25 @@ export function MyCases({
                     <Badge className="bg-yellow-600 mb-3 w-full justify-center">
                       In Progress: {getStepText(caseItem.currentStep)}
                     </Badge>
-                    <Button
-                      onClick={() => onResumeCase(caseItem.id)}
-                      className="w-full"
-                    >
-                      Resume
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => onResumeCase(caseItem.id)}
+                        className="w-full"
+                      >
+                        Resume
+                      </Button>
+                      {!caseItem.resolved && (
+                        <Button
+                          onClick={() => handleDeleteClick(caseItem.id)}
+                          className="w-full"
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <div className="space-y-2">
