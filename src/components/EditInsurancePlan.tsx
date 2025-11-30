@@ -336,7 +336,7 @@ export function EditInsurancePlan({ plan, onSave, onBack }: EditInsurancePlanPro
                                 e.target.value
                               )
                             }
-                            className="mt-1 no-calendar-picker"
+                            className="mt-1"
                           />
                         </div>
                       </div>

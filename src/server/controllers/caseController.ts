@@ -1,5 +1,14 @@
 import { Context } from "hono";
 import { CaseModel } from "../models/Case";
+import { spawn } from "child_process";
+import path from "path";
+import fs from "fs";
+import os from "os";
+import { supabaseServer } from "../supabase/client";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 export const getCases = async (c: Context) => {
   try {
@@ -21,8 +30,17 @@ export const createCase = async (c: Context) => {
     const body = await c.req.json();
     const newCase = new CaseModel(body);
     await newCase.save();
+    console.log(`✅ Case created and saved to MongoDB: ${newCase.id}`);
+    // Verify it was saved
+    const verifyCase = await CaseModel.findOne({ id: newCase.id });
+    if (verifyCase) {
+      console.log(`✅ Verified case exists in MongoDB: ${verifyCase.id}`);
+    } else {
+      console.error(`❌ Case not found after save: ${newCase.id}`);
+    }
     return c.json(newCase, 201);
   } catch (e: any) {
+    console.error('❌ Error creating case:', e);
     return c.json({ error: e.message }, 400);
   }
 };
@@ -110,6 +128,286 @@ export const deleteCase = async (c: Context) => {
     }
     return c.json({ message: "Case deleted successfully" });
   } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};
+
+export const analyzeCase = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const userId = c.req.query("userId");
+
+    if (!userId) {
+      return c.json({ error: "User ID is required" }, 400);
+    }
+
+    const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
+    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+
+    console.log(`🚀 Starting RAG analysis for case ${id}...`);
+
+    // Prepare environment variables for Python process
+    const pythonEnv = {
+      ...process.env,
+      MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    };
+
+    return new Promise((resolve, reject) => {
+      const pythonProcess = spawn(venvPythonPath, [
+        scriptPath,
+        "--caseId", id,
+        "--userId", userId
+      ], {
+        env: pythonEnv,
+        cwd: process.cwd() // Ensure working directory is project root
+      });
+
+      let dataString = "";
+      let errorString = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        dataString += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        errorString += data.toString();
+        console.error(`[Python Stderr]: ${data}`);
+      });
+
+      pythonProcess.on("close", (code) => {
+        if (code !== 0) {
+          console.error(`Python script exited with code ${code}`);
+          resolve(c.json({ error: "Analysis failed", details: errorString }, 500));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(dataString);
+          if (result.error) {
+            resolve(c.json({ error: result.error }, 400));
+          } else {
+            resolve(c.json(result));
+          }
+        } catch (e) {
+          console.error("Failed to parse Python output:", dataString);
+          resolve(c.json({ error: "Invalid response from analysis engine" }, 500));
+        }
+      });
+    }) as Promise<Response>;
+
+  } catch (e: any) {
+    console.error('❌ Error analyzing case:', e);
+    return c.json({ error: e.message }, 500);
+  }
+};
+
+export const generateEmail = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const userId = c.req.query("userId");
+
+    if (!userId) {
+      return c.json({ error: "User ID is required" }, 400);
+    }
+
+    const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
+    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+
+    console.log(`🚀 Starting Email Generation for case ${id}...`);
+
+    // Prepare environment variables for Python process
+    const pythonEnv = {
+      ...process.env,
+      MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    };
+
+    return new Promise((resolve, reject) => {
+      const pythonProcess = spawn(venvPythonPath, [
+        scriptPath,
+        "--mode", "email_draft",
+        "--caseId", id,
+        "--userId", userId
+      ], {
+        env: pythonEnv,
+        cwd: process.cwd()
+      });
+
+      let dataString = "";
+      let errorString = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        dataString += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        errorString += data.toString();
+        console.error(`[Python Stderr]: ${data}`);
+      });
+
+      pythonProcess.on("close", (code) => {
+        if (code !== 0) {
+          console.error(`Python script exited with code ${code}`);
+          resolve(c.json({ error: "Email generation failed", details: errorString }, 500));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(dataString);
+          if (result.error) {
+            resolve(c.json({ error: result.error }, 400));
+          } else {
+            resolve(c.json(result));
+          }
+        } catch (e) {
+          console.error("Failed to parse Python output:", dataString);
+          resolve(c.json({ error: "Invalid response from email generation engine" }, 500));
+        }
+      });
+    }) as Promise<Response>;
+
+  } catch (e: any) {
+    console.error('❌ Error generating email:', e);
+    return c.json({ error: e.message }, 500);
+  }
+};
+
+export const extractDenial = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    
+    // Get case to find denial files
+    const caseData = await CaseModel.findOne({ id });
+    if (!caseData) {
+      return c.json({ error: "Case not found" }, 404);
+    }
+
+    if (!caseData.denialFiles || caseData.denialFiles.length === 0) {
+      return c.json({ error: "No denial files found for this case" }, 400);
+    }
+
+    // Create temp directory for files
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "denial-extract-"));
+    const filePaths: string[] = [];
+
+    // Process denial files - either from Supabase or MongoDB
+    for (const fileData of caseData.denialFiles) {
+      const fileName = fileData.name || `denial_${Date.now()}.pdf`;
+      const filePath = path.join(tempDir, fileName);
+
+      if (fileData.data) {
+        // MongoDB binary data
+        fs.writeFileSync(filePath, Buffer.from(fileData.data));
+        filePaths.push(filePath);
+      } else if (fileData.path) {
+        // Supabase - download from storage
+        if (!supabaseServer) {
+          console.error("Supabase not configured - cannot download file");
+          continue;
+        }
+
+        try {
+          const bucket = fileData.bucket || "denials";
+          console.log(`📥 Downloading file from Supabase: ${bucket}/${fileData.path}`);
+          
+          const { data, error } = await supabaseServer.storage
+            .from(bucket)
+            .download(fileData.path);
+
+          if (error) {
+            console.error(`❌ Error downloading file from Supabase: ${error.message}`);
+            continue;
+          }
+
+          if (data) {
+            // Convert Blob to Buffer and write to file
+            const arrayBuffer = await data.arrayBuffer();
+            fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
+            filePaths.push(filePath);
+            console.log(`✅ Downloaded and saved: ${fileName}`);
+          }
+        } catch (downloadError: any) {
+          console.error(`❌ Error processing Supabase file ${fileData.path}:`, downloadError);
+          // Continue with other files even if one fails
+        }
+      }
+    }
+
+    if (filePaths.length === 0) {
+      return c.json({ error: "No processable denial files found" }, 400);
+    }
+
+    const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
+    const venvPythonPath = path.join(process.cwd(), "venv", "bin", "python");
+
+    console.log(`🚀 Starting Denial Extraction for case ${id} with ${filePaths.length} files...`);
+
+    // Prepare environment variables for Python process
+    const pythonEnv = {
+      ...process.env,
+      MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    };
+
+    return new Promise((resolve, reject) => {
+      const pythonProcess = spawn(venvPythonPath, [
+        scriptPath,
+        "--mode", "denial_extract",
+        "--files", ...filePaths
+      ], {
+        env: pythonEnv,
+        cwd: process.cwd() // Ensure working directory is project root
+      });
+
+      let dataString = "";
+      let errorString = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        dataString += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        errorString += data.toString();
+        console.error(`[Python Stderr]: ${data}`);
+      });
+
+      pythonProcess.on("close", (code) => {
+        // Cleanup temp files
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupErr) {
+          console.error("Failed to cleanup temp dir:", cleanupErr);
+        }
+
+        if (code !== 0) {
+          console.error(`Python script exited with code ${code}`);
+          resolve(c.json({ error: "Denial extraction failed", details: errorString }, 500));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(dataString);
+          if (result.error) {
+            resolve(c.json({ error: result.error }, 400));
+          } else {
+            resolve(c.json(result));
+          }
+        } catch (e) {
+          console.error("Failed to parse Python output:", dataString);
+          resolve(c.json({ error: "Invalid response from extraction engine" }, 500));
+        }
+      });
+    }) as Promise<Response>;
+
+  } catch (e: any) {
+    console.error('❌ Error extracting denial:', e);
     return c.json({ error: e.message }, 500);
   }
 };

@@ -118,6 +118,11 @@ export default function App() {
     fromAppealFlow?: boolean;
   } | null>(null);
 
+  // Extracted denial data from RAG
+  const [extractedDenialData, setExtractedDenialData] = useState<DenialParsedData | null>(null);
+  const [isExtractingDenial, setIsExtractingDenial] = useState(false);
+  const [isAnalyzingCase, setIsAnalyzingCase] = useState(false);
+
   const getCurrentCase = () => cases.find((c) => c.id === currentCaseId);
 
   // Restore session on mount
@@ -335,20 +340,38 @@ export default function App() {
     setCurrentScreen("add-insurance-plan-upload");
   };
 
-  const handlePlanPolicyUploadComplete = (policyType: 'comprehensive' | 'supplementary', files: File[]) => {
+  const handlePlanPolicyUploadComplete = async (policyType: 'comprehensive' | 'supplementary', files: File[]) => {
     setPlanDraft(prev => ({ ...prev!, policyType, policyFiles: files }));
 
-    // Simulate document analysis
-    setTimeout(() => {
-      const extractedData: InsurancePlanParsedData = {
-        insuranceCompany: "Blue Cross Blue Shield",
-        planName: "PPO Gold 2024",
-        policyNumber: "ABC123456",
-        groupNumber: "GRP789",
-      };
+    try {
+      // Call extraction API
+      const formData = new FormData();
+      files.forEach(file => formData.append('files[]', file));
+
+      const response = await fetch(apiUrl('/api/plans/extract'), {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to extract plan details');
+      }
+
+      const extractedData: InsurancePlanParsedData = await response.json();
       setPlanDraft(prev => ({ ...prev!, planData: extractedData }));
       setCurrentScreen('add-insurance-plan-extracted');
-    }, 2000);
+    } catch (e) {
+      console.error('Error extracting plan details:', e);
+      // Fallback to empty data
+      const fallbackData: InsurancePlanParsedData = {
+        insuranceCompany: "Unknown",
+        planName: "Unknown",
+        policyNumber: "Unknown",
+        groupNumber: "Unknown",
+      };
+      setPlanDraft(prev => ({ ...prev!, planData: fallbackData }));
+      setCurrentScreen('add-insurance-plan-extracted');
+    }
   };
 
   const handlePlanExtractedInfoSave = (data: InsurancePlanParsedData) => {
@@ -592,14 +615,29 @@ export default function App() {
           c.id === currentCaseId ? updatedCase : c
         ));
 
-        // Simulate denial document analysis
-        setTimeout(() => {
-          const extractedDenialData: DenialParsedData = {
-            briefDescription: 'ER visit for chest pain denied as not medically necessary'
-          };
+        // Call extraction API for denial description
+        setIsExtractingDenial(true);
+        try {
+          const extractResponse = await fetch(apiUrl(`/api/cases/${currentCaseId}/extract-denial`), {
+            method: 'POST',
+          });
 
+          if (!extractResponse.ok) {
+            throw new Error('Failed to extract denial description');
+          }
+
+          const extracted: DenialParsedData = await extractResponse.json();
+          setExtractedDenialData(extracted);
+          console.log('Denial extraction result:', extracted);
           setCurrentScreen('denial-extracted-info');
-        }, 2000);
+        } catch (e) {
+          console.error("Error extracting denial:", e);
+          // Fallback with empty description
+          setExtractedDenialData({ briefDescription: '' });
+          setCurrentScreen('denial-extracted-info');
+        } finally {
+          setIsExtractingDenial(false);
+        }
       } else {
         console.error("Failed to upload/update files");
       }
@@ -628,6 +666,7 @@ export default function App() {
       status: 'ready-to-send'
     });
 
+    setIsAnalyzingCase(true);
     setCurrentScreen("strategy");
   };
 
@@ -876,9 +915,20 @@ export default function App() {
         />;
       case 'denial-extracted-info':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        if (isExtractingDenial) {
+          return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-gray-700 text-lg">Analyzing denial documents with AI...</p>
+                <p className="text-gray-500 text-sm mt-2">This may take a moment</p>
+              </div>
+            </div>
+          );
+        }
         const plan = insurancePlans.find(p => p.id === currentCase.planId);
         return <DenialExtractedInfo
-          data={{ briefDescription: currentCase.denialReasonTitle }}
+          data={extractedDenialData || { briefDescription: '' }}
           insuranceCompany={plan?.insuranceCompany || 'Unknown'}
           policyNumber={plan?.policyNumber || 'Unknown'}
           onSave={handleDenialExtractedInfoSave}
@@ -886,7 +936,13 @@ export default function App() {
         />;
       case 'strategy':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <AppealStrategy parsedData={currentCase.parsedData} onDraftEmail={handleDraftEmail} onBack={() => setCurrentScreen('denial-extracted-info')} />;
+        return <AppealStrategy 
+        caseId={currentCase.id}
+        userId={user?._id}
+        parsedData={currentCase.parsedData}
+        onDraftEmail={handleDraftEmail}
+        onBack={() => setCurrentScreen('denial-extracted-info')}
+      />;
       case 'email-review':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;

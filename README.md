@@ -4,7 +4,14 @@
 
 Run `npm i` to install the dependencies.
 
-Run `npm run dev` to start the development server.
+Run `npm run dev:client` to start the development client.
+Run `npm run server` to start the development server on a different terminal.
+
+Run `python -m venv venv` to create a virtual environment.
+Run `pip install -r requirements.txt` to install the python dependencies.
+
+For windows, use `.\venv\Scripts\activate` to activate the virtual environment.
+For mac, use `source venv/bin/activate` to activate the virtual environment.
 
 ## Supabase & PostgreSQL
 
