@@ -14,7 +14,8 @@ import {
   Pencil,
   X,
   Copy,
-  Check
+  Check,
+  Send,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -85,6 +86,8 @@ export function CaseDetail({
   const [deleteFileIndex, setDeleteFileIndex] = useState<number | null>(null);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState('');
+  const [submittingResponse, setSubmittingResponse] = useState(false);
 
   // Edit State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -264,6 +267,29 @@ export function CaseDetail({
     }
   };
 
+  const handleSubmitResponse = () => {
+    if (!responseText.trim() || !onSubmitResponse) {
+      alert('Please paste the insurance company response before submitting.');
+      return;
+    }
+
+    const response: EmailMessage = {
+      id: Date.now().toString(),
+      from: `claims@${caseItem.parsedData?.insurer.toLowerCase().replace(/\s+/g, '') || 'insurance'}.com`,
+      to: userEmail,
+      subject: 'Re: Appeal for Claim Denial',
+      body: responseText,
+      date: new Date().toISOString(),
+      type: 'received'
+    };
+
+    setSubmittingResponse(true);
+    onSubmitResponse(response);
+    setTimeout(() => {
+      setSubmittingResponse(false);
+      setResponseText('');
+    }, 500);
+  };
   const handleCopyEmail = async (email: EmailMessage) => {
     const emailText = `To: ${email.to}
 Subject: ${email.subject}
@@ -338,7 +364,6 @@ ${email.body}`;
   const handleRemoveEditFile = (index: number) => {
     setEditDenialFiles(editDenialFiles.filter((_, i) => i !== index));
   };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -621,7 +646,7 @@ ${email.body}`;
             </div>
           </Card>
 
-          {/* Email Thread */}
+          {/* Email Thread with Copy Functionality */}
           {caseItem.emailThread.length > 0 && (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -633,43 +658,62 @@ ${email.body}`;
                     in thread
                   </p>
                 </div>
-                <Button onClick={onViewEmailThread} size="lg">
-                  <Mail className="w-5 h-5 mr-2" />
-                  View Email Thread
-                </Button>
               </div>
+
               <div className="space-y-4">
                 {caseItem.emailThread.map((email) => (
                   <div key={email.id} className={`p-4 rounded-lg border ${email.type === 'sent' ? 'bg-blue-50 border-blue-100 ml-8' : 'bg-gray-50 border-gray-200 mr-8'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="font-semibold text-gray-900">{email.subject}</p>
-                        <p className="text-sm text-gray-600">
-                          {email.type === 'sent' ? 'To: ' : 'From: '} {email.type === 'sent' ? email.to : email.from}
-                        </p>
-                        <p className="text-xs text-gray-500">{new Date(email.date).toLocaleString()}</p>
+                        <div className="font-semibold text-gray-900">{email.from}</div>
+                        <div className="text-xs text-gray-500">{new Date(email.date).toLocaleString()}</div>
                       </div>
                       {email.type === 'sent' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyEmail(email)}
-                          className="h-8"
-                        >
-                          {copiedEmailId === email.id ? (
-                            <Check className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <Copy className="w-4 h-4 text-gray-500" />
-                          )}
+                        <Button variant="ghost" size="sm" onClick={() => handleCopyEmail(email.body, email.id)}>
+                          {copiedEmailId === email.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
                         </Button>
                       )}
                     </div>
-                    <div className="text-gray-800 whitespace-pre-wrap text-sm">
-                      {email.body}
-                    </div>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap">{email.body}</div>
                   </div>
                 ))}
               </div>
+
+              {/* Response Paste Section for Awaiting Reply */}
+              {caseItem.status === 'awaiting-reply' && onSubmitResponse && (
+                <div className="mt-6">
+                  <Card className="p-6 border-2 border-blue-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Mail className="w-5 h-5 text-blue-600" />
+                      <h2 className="text-gray-900">Received a Response?</h2>
+                    </div>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      When the insurance company replies to your appeal, paste their email response here to continue the process.
+                    </p>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="response" className="text-gray-700 mb-2 block">Insurance Company Response</Label>
+                        <Textarea
+                          id="response"
+                          value={responseText}
+                          onChange={(e) => setResponseText(e.target.value)}
+                          placeholder="Paste the complete email response from your insurance company here..."
+                          className="w-full min-h-[200px] font-mono text-sm"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleSubmitResponse}
+                        disabled={!responseText.trim() || submittingResponse}
+                        className="w-full"
+                        size="lg"
+                      >
+                        <Send className="mr-2 w-5 h-5" />
+                        {submittingResponse ? 'Submitting...' : 'Submit Response'}
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )}
 
               {/* Draft Follow-up Button for Received Replies */}
               {caseItem.status === 'reply-received' && onDraftFollowup && (
@@ -680,212 +724,213 @@ ${email.body}`;
                   </Button>
                 </div>
               )}
+            </div>
             </Card>
           )}
+      </div>
+    </div>
+
+      {/* Delete Confirmation Dialog */ }
+  <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Case?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone. This will permanently delete this
+          case and all associated data.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={handleConfirmDelete}
+          className="bg-red-600 hover:bg-red-700"
+        >
+          Delete
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  {/* Delete File Dialog */ }
+  <AlertDialog open={deleteFileDialogOpen} onOpenChange={setDeleteFileDialogOpen}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+        <AlertDialogDescription>
+          Are you sure you want to delete this document? This action cannot be undone.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel onClick={() => {
+          setDeleteFileDialogOpen(false);
+          setDeleteFileIndex(null);
+        }}>Cancel</AlertDialogCancel>
+        <AlertDialogAction onClick={confirmRemoveFile} className="bg-red-600 hover:bg-red-700">
+          Delete
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  {/* Resolve Case Dialog */ }
+  <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Resolve Case</DialogTitle>
+        <DialogDescription>
+          Mark this case as resolved and optionally provide feedback about
+          your experience.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4 py-4">
+        <div>
+          <Label htmlFor="feedback">Feedback (Optional)</Label>
+          <Textarea
+            id="feedback"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="How did your appeal go? Any insights to share?"
+            className="mt-2"
+            rows={4}
+          />
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Case?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this
-              case and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete File Dialog */}
-      <AlertDialog open={deleteFileDialogOpen} onOpenChange={setDeleteFileDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this document? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setDeleteFileDialogOpen(false);
-              setDeleteFileIndex(null);
-            }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemoveFile} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Resolve Case Dialog */}
-      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Resolve Case</DialogTitle>
-            <DialogDescription>
-              Mark this case as resolved and optionally provide feedback about
-              your experience.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="feedback">Feedback (Optional)</Label>
-              <Textarea
-                id="feedback"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="How did your appeal go? Any insights to share?"
-                className="mt-2"
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setResolveDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmResolve}>Mark as Resolved</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* File Viewer Dialog */}
-      <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
-        <DialogContent
-          className="p-0"
-          style={{
-            maxWidth: '95vw',
-            width: '95vw',
-            height: '95vh',
-            maxHeight: '95vh'
-          }}
+      <DialogFooter>
+        <Button
+          variant="outline"
+          onClick={() => setResolveDialogOpen(false)}
         >
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle>{selectedFileName}</DialogTitle>
-            <DialogDescription>
-              Viewing document securely with a temporary access link
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto px-6 pb-6" style={{ height: 'calc(95vh - 6rem)' }}>
-            {selectedFileUrl && (
-              <iframe
-                src={selectedFileUrl}
-                className="w-full h-full border-0"
-                title={selectedFileName || 'File viewer'}
-                allow="fullscreen"
-              />
+          Cancel
+        </Button>
+        <Button onClick={handleConfirmResolve}>Mark as Resolved</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* File Viewer Dialog */ }
+  <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
+    <DialogContent
+      className="p-0"
+      style={{
+        maxWidth: '95vw',
+        width: '95vw',
+        height: '95vh',
+        maxHeight: '95vh'
+      }}
+    >
+      <DialogHeader className="px-6 pt-6">
+        <DialogTitle>{selectedFileName}</DialogTitle>
+        <DialogDescription>
+          Viewing document securely with a temporary access link
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex-1 overflow-auto px-6 pb-6" style={{ height: 'calc(95vh - 6rem)' }}>
+        {selectedFileUrl && (
+          <iframe
+            src={selectedFileUrl}
+            className="w-full h-full border-0"
+            title={selectedFileName || 'File viewer'}
+            allow="fullscreen"
+          />
+        )}
+      </div>
+    </DialogContent>
+  </Dialog>
+
+  {/* Edit Case Dialog */ }
+  <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Edit Case Details</DialogTitle>
+        <DialogDescription>
+          Update the information for this appeal case.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-6 py-4">
+        <div>
+          <Label htmlFor="edit-plan">Insurance Plan</Label>
+          <Select value={editPlanId} onValueChange={setEditPlanId}>
+            <SelectTrigger id="edit-plan" className="mt-2">
+              <SelectValue placeholder="Select insurance plan" />
+            </SelectTrigger>
+            <SelectContent>
+              {insurancePlans.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.planName} - {p.insuranceCompany}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="edit-person">Covered Individual</Label>
+          <Select value={editCoveredPersonId} onValueChange={setEditCoveredPersonId}>
+            <SelectTrigger id="edit-person" className="mt-2">
+              <SelectValue placeholder="Select covered individual" />
+            </SelectTrigger>
+            <SelectContent>
+              {insurancePlans.find(p => p.id === editPlanId)?.coveredIndividuals.map(person => (
+                <SelectItem key={person.id} value={person.id}>{person.name} ({person.relationship})</SelectItem>
+              )) || <SelectItem value="none" disabled>No individuals found</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="edit-denial-reason">Denial Reason Title</Label>
+          <Input
+            id="edit-denial-reason"
+            value={editDenialReason}
+            onChange={(e) => setEditDenialReason(e.target.value)}
+            className="mt-2"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label>Denial Documents</Label>
+            <input
+              type="file"
+              ref={editFileInputRef}
+              multiple
+              className="hidden"
+              onChange={handleEditUpload}
+              accept=".pdf,.jpg,.jpeg,.png"
+            />
+            <Button variant="outline" size="sm" onClick={() => editFileInputRef.current?.click()}>
+              <Upload className="w-4 h-4 mr-2" />
+              Add Document
+            </Button>
+          </div>
+          <div className="space-y-2 border rounded-md p-2 bg-gray-50">
+            {editDenialFiles.length > 0 ? (
+              editDenialFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div className="flex items-center gap-2 truncate">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveEditFile(index)}>
+                    <X className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-2">No documents attached</p>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Case Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Case Details</DialogTitle>
-            <DialogDescription>
-              Update the information for this appeal case.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div>
-              <Label htmlFor="edit-plan">Insurance Plan</Label>
-              <Select value={editPlanId} onValueChange={setEditPlanId}>
-                <SelectTrigger id="edit-plan" className="mt-2">
-                  <SelectValue placeholder="Select insurance plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {insurancePlans.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.planName} - {p.insuranceCompany}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-person">Covered Individual</Label>
-              <Select value={editCoveredPersonId} onValueChange={setEditCoveredPersonId}>
-                <SelectTrigger id="edit-person" className="mt-2">
-                  <SelectValue placeholder="Select covered individual" />
-                </SelectTrigger>
-                <SelectContent>
-                  {insurancePlans.find(p => p.id === editPlanId)?.coveredIndividuals.map(person => (
-                    <SelectItem key={person.id} value={person.id}>{person.name} ({person.relationship})</SelectItem>
-                  )) || <SelectItem value="none" disabled>No individuals found</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-denial-reason">Denial Reason Title</Label>
-              <Input
-                id="edit-denial-reason"
-                value={editDenialReason}
-                onChange={(e) => setEditDenialReason(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Denial Documents</Label>
-                <input
-                  type="file"
-                  ref={editFileInputRef}
-                  multiple
-                  className="hidden"
-                  onChange={handleEditUpload}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-                <Button variant="outline" size="sm" onClick={() => editFileInputRef.current?.click()}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Add Document
-                </Button>
-              </div>
-              <div className="space-y-2 border rounded-md p-2 bg-gray-50">
-                {editDenialFiles.length > 0 ? (
-                  editDenialFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => handleRemoveEditFile(index)}>
-                        <X className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-2">No documents attached</p>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+          Cancel
+        </Button>
+        <Button onClick={handleSaveEdit}>
+          Save Changes
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+    </div >
   );
 }

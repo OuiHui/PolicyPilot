@@ -44,9 +44,8 @@ export function Dashboard({
     {
       number: 3,
       icon: Send,
-      title: "Automate Your Outreach",
-      description:
-        "Review and send professionally crafted appeals directly from your email.",
+      title: 'Generate Your Appeal',
+      description: 'Generate and copy professionally crafted appeal letters to send from your email.'
     },
   ];
 
@@ -120,109 +119,108 @@ export function Dashboard({
             Challenge Your Insurance Denial with Confidence
           </div>
           <p className="text-xl text-gray-600 mb-6 max-w-2xl">
-            Navigate the complex appeals process with AI-powered guidance. We
-            analyze your denial, find conflicting policy provisions, and help
-            you craft compelling appeals.
-          </p>
+            Navigate the complex appeals process with AI-powered guidance. We analyze your denial,
+            find conflicting policy provisions, and help you craft compelling appeals.
+          </p >
           <Button onClick={onStartNewAppeal} className="px-8" size="lg">
             Start New Appeal
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
-        </div>
+        </div >
 
         {/* Recent Cases */}
-        {recentCases.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Recent Cases
-            </h2>
-            <div className="grid md:grid-cols-3 gap-4">
-              {recentCases.map((caseItem) => (
-                <Card
-                  key={caseItem.id}
-                  className={`p-6 hover:shadow-lg transition-shadow ${
-                    caseItem.resolved ? "bg-gray-50" : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <FileText
-                      className={`w-8 h-8 ${
-                        caseItem.resolved ? "text-gray-400" : "text-blue-600"
+        {
+          recentCases.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+                Recent Cases
+              </h2>
+              <div className="grid md:grid-cols-3 gap-4">
+                {recentCases.map((caseItem) => (
+                  <Card
+                    key={caseItem.id}
+                    className={`p-6 hover:shadow-lg transition-shadow ${caseItem.resolved ? "bg-gray-50" : ""
                       }`}
-                    />
-                    <div className="flex gap-2">
-                      {caseItem.hasNewEmail && !caseItem.resolved && (
-                        <Badge variant="destructive" className="animate-pulse">
-                          New
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <FileText
+                        className={`w-8 h-8 ${caseItem.resolved ? "text-gray-400" : "text-blue-600"
+                          }`}
+                      />
+                      <div className="flex gap-2">
+                        {caseItem.hasNewEmail && !caseItem.resolved && (
+                          <Badge variant="destructive" className="animate-pulse">
+                            New
+                          </Badge>
+                        )}
+                        <Badge className={getStatusColor(caseItem.status)}>
+                          {getStatusText(caseItem.status)}
                         </Badge>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="text-sm">
+                        <span className="font-semibold text-gray-700">For:</span>{" "}
+                        <span className="text-gray-900">
+                          {getPatientName(caseItem)}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold text-gray-700">
+                          Issue:
+                        </span>{" "}
+                        <span className="text-gray-900">
+                          {caseItem.denialReasonTitle}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold text-gray-700">Plan:</span>{" "}
+                        <span className="text-gray-900">
+                          {getPlanName(caseItem)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-500 mb-4">
+                      Created{" "}
+                      {new Date(caseItem.dateCreated).toLocaleDateString()}
+                      {caseItem.resolvedDate && (
+                        <>
+                          {" "}
+                          • Resolved{" "}
+                          {new Date(caseItem.resolvedDate).toLocaleDateString()}
+                        </>
                       )}
-                      <Badge className={getStatusColor(caseItem.status)}>
-                        {getStatusText(caseItem.status)}
-                      </Badge>
-                    </div>
-                  </div>
+                    </p>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="text-sm">
-                      <span className="font-semibold text-gray-700">For:</span>{" "}
-                      <span className="text-gray-900">
-                        {getPatientName(caseItem)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-semibold text-gray-700">
-                        Issue:
-                      </span>{" "}
-                      <span className="text-gray-900">
-                        {caseItem.denialReasonTitle}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-semibold text-gray-700">Plan:</span>{" "}
-                      <span className="text-gray-900">
-                        {getPlanName(caseItem)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-500 mb-4">
-                    Created{" "}
-                    {new Date(caseItem.dateCreated).toLocaleDateString()}
-                    {caseItem.resolvedDate && (
+                    {isIncomplete(caseItem) ? (
                       <>
-                        {" "}
-                        • Resolved{" "}
-                        {new Date(caseItem.resolvedDate).toLocaleDateString()}
+                        <Badge className="bg-yellow-600 mb-3 w-full justify-center">
+                          In Progress: {caseItem.currentStep}
+                        </Badge>
+                        <Button
+                          onClick={() => onResumeCase(caseItem.id)}
+                          className="w-full"
+                        >
+                          Resume
+                        </Button>
                       </>
-                    )}
-                  </p>
-
-                  {isIncomplete(caseItem) ? (
-                    <>
-                      <Badge className="bg-yellow-600 mb-3 w-full justify-center">
-                        In Progress: {caseItem.currentStep}
-                      </Badge>
+                    ) : (
                       <Button
-                        onClick={() => onResumeCase(caseItem.id)}
+                        onClick={() => onViewCase(caseItem.id)}
                         className="w-full"
+                        variant="outline"
                       >
-                        Resume
+                        View Details
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      onClick={() => onViewCase(caseItem.id)}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      View Details
-                    </Button>
-                  )}
-                </Card>
-              ))}
+                    )}
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* How It Works Section */}
         <div>
@@ -249,7 +247,7 @@ export function Dashboard({
             })}
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

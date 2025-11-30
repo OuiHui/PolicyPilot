@@ -16,7 +16,7 @@ export function ProgressBar({
     currentStep,
     steps: stepTitles,
 }: ProgressBarProps) {
-    const defaultSteps = ["Upload Documents", "Strategy", "Send & Monitor"];
+    const defaultSteps = ["Upload Documents", "Strategy", "Copy Email"];
     const titles = stepTitles || defaultSteps;
 
     const steps: Step[] = titles.map((title, index) => ({
@@ -26,8 +26,8 @@ export function ProgressBar({
             currentStep > index
                 ? "completed"
                 : currentStep === index
-                ? "current"
-                : "upcoming",
+                    ? "current"
+                    : "upcoming",
     }));
 
     return (
@@ -43,17 +43,15 @@ export function ProgressBar({
                                 <div
                                     className={`
                     w-10 h-10 rounded-full flex items-center justify-center transition-all
-                    ${
-                        step.status === "completed"
-                            ? "bg-green-600 text-white"
-                            : ""
-                    }
+                    ${step.status === "completed"
+                                            ? "bg-green-600 text-white"
+                                            : ""
+                                        }
                     ${step.status === "current" ? "bg-blue-600 text-white" : ""}
-                    ${
-                        step.status === "upcoming"
-                            ? "bg-gray-200 text-gray-500"
-                            : ""
-                    }
+                    ${step.status === "upcoming"
+                                            ? "bg-gray-200 text-gray-500"
+                                            : ""
+                                        }
                   `}
                                 >
                                     {step.status === "completed" ? (
@@ -65,11 +63,10 @@ export function ProgressBar({
                                 <div className="ml-3">
                                     <p
                                         className={`
-                      ${
-                          step.status === "current"
-                              ? "text-gray-900"
-                              : "text-gray-500"
-                      }
+                      ${step.status === "current"
+                                                ? "text-gray-900"
+                                                : "text-gray-500"
+                                            }
                     `}
                                     >
                                         {step.title}
@@ -80,11 +77,10 @@ export function ProgressBar({
                                 <div className="flex-1 mx-4">
                                     <div className="h-0.5 bg-gray-200">
                                         <div
-                                            className={`h-full transition-all ${
-                                                step.status === "completed"
+                                            className={`h-full transition-all ${step.status === "completed"
                                                     ? "bg-green-600 w-full"
                                                     : "bg-gray-200 w-0"
-                                            }`}
+                                                }`}
                                         />
                                     </div>
                                 </div>

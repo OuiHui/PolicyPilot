@@ -1,21 +1,11 @@
 import { useState } from 'react';
-import { Mail, ArrowRight, ArrowLeft, Lock, Send } from 'lucide-react';
+import { Mail, ArrowLeft, ArrowRight, Copy, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ProgressBar } from './ProgressBar';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from './ui/alert-dialog';
 import type { ParsedData, EmailMessage } from '../App';
 
 type EmailReviewProps = {
@@ -26,15 +16,15 @@ type EmailReviewProps = {
 };
 
 export function EmailReview({ userEmail, parsedData, onSend, onBack }: EmailReviewProps) {
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [to, setTo] = useState('claims@' + parsedData.insurer.toLowerCase().replace(/\s+/g, '') + '.com');
   const [subject, setSubject] = useState(`Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
-  
+
   const progressSteps = [
     "Choose Plan",
     "Upload Documents",
     "Strategy",
-    "Send",
+    "Copy Email",
   ];
   const [body, setBody] = useState(
     `Dear ${parsedData.insurer} Claims Department,
@@ -52,7 +42,7 @@ Accordingly, I respectfully request that ${parsedData.insurer}:
 2. Review the determination under the cited policy provisions; and
 3. Provide a written explanation detailing the rationale and evidence used should the denial be upheld.
 
-Please confirm receipt of this appeal and advise me of any additional information required to facilitate your review. I look forward to your response within the timeframe specified under my policy’s appeals process.
+Please confirm receipt of this appeal and advise me of any additional information required to facilitate your review. I look forward to your response within the timeframe specified under my policy's appeals process.
 
 Thank you for your prompt attention to this matter.
 
@@ -60,7 +50,25 @@ Sincerely,
 [Your Name]`
   );
 
-  const handleSend = () => {
+  const handleCopyEmail = async () => {
+    const emailText = `To: ${to}
+Subject: ${subject}
+
+${body}`;
+
+    try {
+      await navigator.clipboard.writeText(emailText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+      // DO NOT call onSend here - just copy to clipboard
+    } catch (err) {
+      console.error('Failed to copy email:', err);
+      alert('Failed to copy to clipboard. Please try again or copy manually.');
+    }
+  };
+
+  const handleNext = () => {
+    // Save to email thread when user clicks Next
     const message: EmailMessage = {
       id: Date.now().toString(),
       from: userEmail,
@@ -71,18 +79,17 @@ Sincerely,
       type: 'sent'
     };
     onSend(message);
-    setShowConfirmation(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={3} steps={progressSteps} />
-      
+
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <h1 className="text-gray-900 mb-2">Draft Your Initial Email</h1>
+          <h1 className="text-gray-900 mb-2">Review Your Appeal Letter</h1>
           <p className="text-gray-600">
-            Review and edit your appeal email before sending.
+            Review and edit your appeal email, then copy it to send from your email client.
           </p>
         </div>
 
@@ -93,24 +100,6 @@ Sincerely,
           </div>
 
           <div className="space-y-6">
-            {/* From Field - Locked */}
-            <div>
-              <Label className="text-gray-700 mb-2 block">From</Label>
-              <div className="relative">
-              <Input
-                id="from"
-                type="email"
-                value="policypilotco@gmail.com"
-                disabled
-                className="w-full bg-gray-100 pr-10"
-              />
-              <Lock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-              </div>
-              <p className="text-gray-500 mt-1">
-              Email will be sent from policypilotco@gmail.com
-              </p>
-            </div>
-
             {/* To Field - Editable */}
             <div>
               <Label htmlFor="to" className="text-gray-700 mb-2 block">To</Label>
@@ -121,7 +110,7 @@ Sincerely,
                 placeholder="claims@insurer.com"
                 className="w-full"
               />
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 mt-1 text-sm">
                 Insurance company claims department email
               </p>
             </div>
@@ -144,8 +133,24 @@ Sincerely,
                 id="body"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full min-h-[500px] font-mono"
+                className="w-full min-h-[500px] font-mono text-sm"
               />
+            </div>
+          </div>
+        </Card>
+
+        {/* Instructions Banner */}
+        <Card className="p-4 bg-blue-50 border-blue-200 mb-6">
+          <div className="flex items-start gap-3">
+            <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-blue-900 mb-1 font-semibold">
+                Next Steps:
+              </p>
+              <p className="text-blue-800 text-sm">
+                Click "Copy to Clipboard" to copy this email, then paste it into your email client
+                to send to the insurance company. When ready, click "Next" to continue tracking your appeal.
+              </p>
             </div>
           </div>
         </Card>
@@ -155,31 +160,36 @@ Sincerely,
             <ArrowLeft className="mr-2 w-5 h-5" />
             Back
           </Button>
-          <Button onClick={() => setShowConfirmation(true)} size="lg" className="px-8">
-            <Send className="mr-2 w-5 h-5" />
-            Send Email
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={handleCopyEmail}
+              size="lg"
+              variant="outline"
+              className="px-6"
+            >
+              {copied ? (
+                <>
+                  <Check className="mr-2 w-5 h-5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 w-5 h-5" />
+                  Copy to Clipboard
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleNext}
+              size="lg"
+              className="px-8"
+            >
+              Next
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Send Appeal Email?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will send your appeal email to {to} from {userEmail}. 
-              Make sure you've reviewed all the details carefully.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSend}>
-              Send Email
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

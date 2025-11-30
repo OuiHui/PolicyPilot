@@ -713,9 +713,21 @@ export default function App() {
     setCurrentScreen('reply-received');
   };
 
-  const handleViewCase = (caseId: string) => {
-    setCurrentCaseId(caseId);
-    setCurrentScreen("case-detail");
+
+  const handleSubmitResponse = async (response: EmailMessage) => {
+    if (!currentCaseId) return;
+    const currentCase = getCurrentCase();
+    if (!currentCase) return;
+
+    await updateCaseInDb(currentCaseId, {
+      emailThread: [...currentCase.emailThread, response],
+      status: 'reply-received',
+      currentStep: 'reply-received',
+      hasNewEmail: true
+    });
+
+    setCurrentScreen('reply-received');
+
   };
 
   const handleViewEmailThread = () => {
@@ -781,8 +793,6 @@ export default function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setHasAcceptedHIPAA(false);
-    setIsLoggedIn(false);
-    setHasAcceptedHIPAA(false);
     setUser(null);
     setUserEmail('');
     setCases([]);
@@ -791,6 +801,11 @@ export default function App() {
     setCurrentPlanId(null);
     setPlanDraft(null);
     setCurrentScreen("login");
+  };
+
+  const handleViewCase = (caseId: string) => {
+    setCurrentCaseId(caseId);
+    setCurrentScreen("case-detail");
   };
 
   const renderScreen = () => {
@@ -894,6 +909,9 @@ export default function App() {
           onViewEmailThread={handleViewEmailThread}
           insurancePlans={insurancePlans}
           onEditCase={handleEditCase}
+          userEmail={userEmail}
+          onSubmitResponse={handleSubmitResponse}
+          onDraftFollowup={() => setCurrentScreen('followup-review')}
         />;
 
       case 'email-thread':
@@ -936,16 +954,28 @@ export default function App() {
         />;
       case 'strategy':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
-        return <AppealStrategy 
-        caseId={currentCase.id}
-        userId={user?._id}
-        parsedData={currentCase.parsedData}
-        onDraftEmail={handleDraftEmail}
-        onBack={() => setCurrentScreen('denial-extracted-info')}
-      />;
+        return <AppealStrategy
+          caseId={currentCase.id}
+          userId={user?._id}
+          parsedData={currentCase.parsedData}
+          onDraftEmail={handleDraftEmail}
+          onBack={() => setCurrentScreen('denial-extracted-info')}
+        />;
       case 'email-review':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
         return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} />;
+      case 'email-sent':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <EmailSent case={currentCase} userEmail={userEmail} onViewReply={handleViewReply} onBackToDashboard={() => setCurrentScreen('dashboard')} onSubmitResponse={handleSubmitResponse} />;
+      case 'reply-received':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <ReplyReceived case={currentCase} onDraftFollowup={() => setCurrentScreen('followup-review')} onBack={() => setCurrentScreen('email-sent')} />;
+      case 'followup-review':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} />;
+        return <FollowupReview userEmail={userEmail} onSend={handleSendEmail} onBack={() => setCurrentScreen('reply-received')} />;
+      case 'settings':
+        return <Settings userEmail={userEmail} onLogout={handleLogout} />;
+      default:
         return <Login onLogin={handleLogin} />;
     }
   };
