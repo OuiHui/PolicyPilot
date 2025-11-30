@@ -766,7 +766,7 @@ ${email.body}`;
       {/* File Viewer Dialog */}
       <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
         <DialogContent
-          className="p-0"
+          className="p-0 flex flex-col"
           style={{
             maxWidth: '95vw',
             width: '95vw',
@@ -774,17 +774,17 @@ ${email.body}`;
             maxHeight: '95vh'
           }}
         >
-          <DialogHeader className="px-6 pt-6">
+          <DialogHeader className="px-6 pt-6 flex-shrink-0">
             <DialogTitle>{selectedFileName}</DialogTitle>
             <DialogDescription>
               Viewing document securely with a temporary access link
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-auto px-6 pb-6" style={{ height: 'calc(95vh - 6rem)' }}>
+          <div className="flex-1 overflow-hidden px-6 pb-6 w-full">
             {selectedFileUrl && (
               <iframe
                 src={selectedFileUrl}
-                className="w-full h-full border-0"
+                className="w-full h-full border-0 rounded-md bg-gray-100"
                 title={selectedFileName || 'File viewer'}
                 allow="fullscreen"
               />

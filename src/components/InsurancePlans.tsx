@@ -329,7 +329,7 @@ export function InsurancePlans({
 
       <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
         <DialogContent
-          className="p-0"
+          className="p-0 flex flex-col"
           style={{
             maxWidth: '95vw',
             width: '95vw',
@@ -337,17 +337,17 @@ export function InsurancePlans({
             maxHeight: '95vh'
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="px-6 pt-6 flex-shrink-0">
             <DialogTitle>{selectedFileName}</DialogTitle>
             <DialogDescription>
               Viewing document securely
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 h-full min-h-[60vh] bg-gray-100 rounded-md overflow-hidden">
+          <div className="flex-1 overflow-hidden px-6 pb-6 w-full">
             {selectedFileUrl ? (
               <iframe
                 src={selectedFileUrl}
-                className="w-full h-full border-0"
+                className="w-full h-full border-0 rounded-md bg-gray-100"
                 title="Document Viewer"
                 allow="fullscreen"
               />
