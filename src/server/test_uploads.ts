@@ -54,7 +54,7 @@ const mockContext = (body: any, params: any = {}) => {
       insuranceCompany: "Test Insurer",
       planName: "Test Plan",
       policyNumber: "123",
-      groupNumber: "456",
+
       policyType: "comprehensive",
       dateAdded: new Date().toISOString(),
       "policyFiles[]": [file1],

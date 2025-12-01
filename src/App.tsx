@@ -112,6 +112,7 @@ export type EmailMessage = {
     actionItems: string[];
   };
   threadId?: string;
+  messageIdHeader?: string;
 };
 
 export default function App() {
@@ -238,7 +239,36 @@ export default function App() {
     }
   };
 
+  // Handle Google Login Callback
+  useEffect(() => {
+    console.log("App mounted, checking URL params:", window.location.search);
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get("userId");
+    const email = params.get("email");
+    const firstName = params.get("firstName");
+    const lastName = params.get("lastName");
+    const hipaaAcceptedStr = params.get("hipaaAccepted");
+    const hipaaAccepted = hipaaAcceptedStr === "true";
+
+    console.log("Parsed params:", { userId, email, hipaaAccepted });
+
+    if (userId && email) {
+      console.log("Triggering handleLogin from useEffect");
+      handleLogin({
+        _id: userId,
+        email,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        hipaaAccepted: hipaaAccepted
+      });
+      // Clean URL
+      console.log("Cleaning URL");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []); // Run once on mount
+
   const handleLogin = async (userData: any) => {
+    console.log("handleLogin called with:", userData);
     setUser(userData);
     setUserEmail(userData.email);
     setIsLoggedIn(true);
@@ -246,6 +276,14 @@ export default function App() {
     // Persist login to localStorage
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('isLoggedIn', 'true');
+
+    // Set screen immediately
+    if (userData.hipaaAccepted) {
+      setHasAcceptedHIPAA(true);
+      setCurrentScreen('dashboard');
+    } else {
+      setCurrentScreen('hipaa-consent');
+    }
 
     if (userData._id) {
       try {
@@ -265,13 +303,6 @@ export default function App() {
       } catch (e) {
         console.error("Error fetching user data", e);
       }
-    }
-
-    if (userData.hipaaAccepted) {
-      setHasAcceptedHIPAA(true);
-      setCurrentScreen('dashboard');
-    } else {
-      setCurrentScreen('hipaa-consent');
     }
   };
 
@@ -383,7 +414,7 @@ export default function App() {
         insuranceCompany: "Unknown",
         planName: "Unknown",
         policyNumber: "Unknown",
-        groupNumber: "Unknown",
+
       };
       setPlanDraft(prev => ({ ...prev!, planData: fallbackData }));
       setCurrentScreen('add-insurance-plan-extracted');
@@ -430,7 +461,7 @@ export default function App() {
           insuranceCompany: planDraft.planData.insuranceCompany || "",
           planName: planDraft.planData.planName || "",
           policyNumber: planDraft.planData.policyNumber || "",
-          groupNumber: planDraft.planData.groupNumber || "",
+
           policyType: planDraft.policyType,
           dateAdded: new Date().toISOString(),
           coveredIndividuals: planDraft.coveredIndividuals || [],
@@ -450,7 +481,7 @@ export default function App() {
         formData.append("insuranceCompany", planDraft.planData.insuranceCompany || "");
         formData.append("planName", planDraft.planData.planName || "");
         formData.append("policyNumber", planDraft.planData.policyNumber || "");
-        formData.append("groupNumber", planDraft.planData.groupNumber || "");
+
         formData.append("policyType", planDraft.policyType);
         formData.append("dateAdded", new Date().toISOString());
         formData.append("coveredIndividuals", JSON.stringify(planDraft.coveredIndividuals || []));
@@ -724,7 +755,7 @@ export default function App() {
         if (response.ok) {
             const result = await response.json();
             if (result.emailDraft) {
-                handleDraftEmail(result.emailDraft);
+                handleDraftFollowupGenerated(result.emailDraft);
             }
         } else {
             console.error("Failed to generate follow-up");
@@ -937,20 +968,21 @@ export default function App() {
         />;
       case 'add-insurance-plan-extracted':
         return <InsurancePlanExtractedInfo
-          data={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '', groupNumber: '' }}
+          data={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '' }}
           onSave={handlePlanExtractedInfoSave}
           onBack={() => setCurrentScreen('add-insurance-plan-upload')}
         />;
       case 'add-insurance-plan-coverage':
         return <AddInsurancePlanCoverage
           userEmail={userEmail}
+          userName={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''}
           initialCoveredIndividuals={planDraft?.coveredIndividuals}
           onContinue={handlePlanCoverageComplete}
           onBack={() => setCurrentScreen('add-insurance-plan-extracted')}
         />;
       case 'add-insurance-plan-review':
         return <AddInsurancePlanReview
-          planData={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '', groupNumber: '' }}
+          planData={planDraft?.planData || { insuranceCompany: '', planName: '', policyNumber: '' }}
           policyType={planDraft?.policyType || 'comprehensive'}
           policyFiles={planDraft?.policyFiles || []}
           coveredIndividuals={planDraft?.coveredIndividuals || []}

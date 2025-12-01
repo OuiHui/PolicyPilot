@@ -17,7 +17,7 @@ const insurancePlanSchema = new mongoose.Schema({
   insuranceCompany: String,
   planName: String,
   policyNumber: String,
-  groupNumber: String,
+
   policyType: { type: String, enum: ["comprehensive", "supplementary"] },
   policyFiles: [fileSchema],
   coveredIndividuals: [coveredPersonSchema],

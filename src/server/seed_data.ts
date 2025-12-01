@@ -32,7 +32,7 @@ import { connectDB } from "./db";
       insuranceCompany: "Blue Cross Blue Shield",
       planName: "PPO Gold 2024",
       policyNumber: "ABC123456",
-      groupNumber: "GRP789",
+
       policyType: "comprehensive",
       policyFiles: [
         {

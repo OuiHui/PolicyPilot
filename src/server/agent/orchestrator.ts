@@ -21,6 +21,7 @@ export class AgentOrchestrator {
     const from = headers.find(h => h.name === 'From')?.value || '';
     const to = headers.find(h => h.name === 'To')?.value || '';
     const subject = headers.find(h => h.name === 'Subject')?.value || '';
+    const messageIdHeader = headers.find(h => h.name === 'Message-ID')?.value || '';
     const threadId = message.threadId || '';
     const internalDate = new Date(parseInt(message.internalDate || '0'));
     
@@ -101,6 +102,7 @@ export class AgentOrchestrator {
     const emailDoc = new Email({
       messageId,
       threadId,
+      messageIdHeader,
       from,
       to,
       subject,
@@ -143,6 +145,7 @@ export class AgentOrchestrator {
                         date: internalDate.toISOString(),
                         type: 'received',
                         threadId: threadId, // Save threadId to Case
+                        messageIdHeader: messageIdHeader,
                         analysis
                     }
                 },
@@ -323,15 +326,28 @@ ${body}
     }
     
     // Format email history
-    const emailHistory = caseDoc.emailThread.map((e: any) => `
+    const emailHistory = caseDoc.emailThread.map((e: any) => {
+        let entry = `
 --------------------------------------------------
 From: ${e.from}
 Date: ${e.date}
 Subject: ${e.subject}
 Body:
 ${e.body}
---------------------------------------------------
-    `).join('\n');
+`;
+        if (e.analysis) {
+            entry += `
+[INTERNAL ANALYSIS]
+Summary: ${e.analysis.summary || 'N/A'}
+Weaknesses Identified:
+${(e.analysis.weaknesses || []).map((w: string) => `- ${w}`).join('\n')}
+Recommended Actions:
+${(e.analysis.actionItems || []).map((a: string) => `- ${a}`).join('\n')}
+`;
+        }
+        entry += `--------------------------------------------------`;
+        return entry;
+    }).join('\n');
     
     // Write history to temp file
     const fs = require('fs');

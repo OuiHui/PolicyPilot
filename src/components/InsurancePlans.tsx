@@ -47,7 +47,7 @@ export type InsurancePlan = {
   insuranceCompany: string;
   planName: string;
   policyNumber: string;
-  groupNumber?: string;
+
   policyType: "comprehensive" | "supplementary";
   policyFiles: (File | { name: string; size: number; type: string; bucket?: string; path?: string })[];
   coveredIndividuals: CoveredPerson[];
@@ -224,12 +224,7 @@ export function InsurancePlans({
                     <FileText className="w-4 h-4" />
                     <span>Policy: {plan.policyNumber}</span>
                   </div>
-                  {plan.groupNumber && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <FileText className="w-4 h-4" />
-                      <span>Group: {plan.groupNumber}</span>
-                    </div>
-                  )}
+
                   <div className="flex items-center gap-2 text-gray-600">
                     <Users className="w-4 h-4" />
                     <span>

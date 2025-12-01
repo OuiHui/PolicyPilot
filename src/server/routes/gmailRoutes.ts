@@ -4,6 +4,7 @@ import * as gmailController from '../controllers/gmailController';
 const app = new Hono();
 
 app.get('/auth', gmailController.auth);
+app.get('/login', gmailController.login);
 app.get('/callback', gmailController.oauthCallback);
 app.post('/send', gmailController.sendEmail);
 app.post('/webhook', gmailController.webhook);

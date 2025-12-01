@@ -10,6 +10,7 @@ const emailMessageSchema = new mongoose.Schema({
   date: String,
   type: { type: String, enum: ["sent", "received"] },
   threadId: String, // Add threadId to schema
+  messageIdHeader: String, // Add RFC 2822 Message-ID header
   analysis: {
     summary: String,
     weaknesses: [String],

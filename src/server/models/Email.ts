@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const emailSchema = new mongoose.Schema({
   messageId: { type: String, required: true, unique: true },
   threadId: { type: String, required: true },
+  messageIdHeader: { type: String }, // RFC 2822 Message-ID header
   from: { type: String, required: true },
   to: { type: String, required: true },
   subject: { type: String },
