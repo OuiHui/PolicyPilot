@@ -850,6 +850,7 @@ export default function App() {
         : c
     ));
     setCurrentScreen('followup-review');
+  };
     
   const handleUserUpdate = (updatedUser: any) => {
     setUser(updatedUser);
