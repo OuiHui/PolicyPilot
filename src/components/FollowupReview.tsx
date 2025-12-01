@@ -89,8 +89,9 @@ Sincerely,
 
     // We need the threadId from the last email, or any email in the thread
     // And the messageId of the last email for In-Reply-To
+    // CRITICAL: Use the RFC 2822 Message-ID header if available, otherwise Gmail API ID might fail threading
     const threadId = lastReceived?.threadId;
-    const inReplyTo = lastReceived?.id; // Assuming id is the messageId for received emails
+    const inReplyTo = lastReceived?.messageIdHeader || lastReceived?.id;
 
     console.log("FollowupReview: threadId", threadId);
     console.log("FollowupReview: inReplyTo", inReplyTo);

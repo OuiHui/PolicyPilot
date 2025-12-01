@@ -44,7 +44,7 @@ export function EditInsurancePlan({ plan, onSave, onBack }: EditInsurancePlanPro
   );
   const [planName, setPlanName] = useState(plan.planName);
   const [policyNumber, setPolicyNumber] = useState(plan.policyNumber);
-  const [groupNumber, setGroupNumber] = useState(plan.groupNumber || '');
+
   const [policyFiles, setPolicyFiles] = useState<File[]>(plan.policyFiles);
   const [coveredIndividuals, setCoveredIndividuals] = useState<CoveredPerson[]>(plan.coveredIndividuals);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -119,7 +119,7 @@ export function EditInsurancePlan({ plan, onSave, onBack }: EditInsurancePlanPro
         insuranceCompany === 'Other' ? customInsurer : insuranceCompany,
       planName,
       policyNumber,
-      groupNumber: groupNumber || undefined,
+
       policyFiles,
       coveredIndividuals,
     };
@@ -213,16 +213,7 @@ export function EditInsurancePlan({ plan, onSave, onBack }: EditInsurancePlanPro
                 />
               </div>
 
-              <div>
-                <Label htmlFor="groupNumber">Group Number (Optional)</Label>
-                <Input
-                  id="groupNumber"
-                  value={groupNumber}
-                  onChange={(e) => setGroupNumber(e.target.value)}
-                  placeholder="e.g., GRP987654"
-                  className="mt-2"
-                />
-              </div>
+
             </div>
           </Card>
 

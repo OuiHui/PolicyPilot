@@ -64,14 +64,7 @@ export function AddInsurancePlanReview({
                   {planData.policyNumber}
                 </span>
               </div>
-              {planData.groupNumber && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Group Number:</span>
-                  <span className="text-gray-900 font-medium">
-                    {planData.groupNumber}
-                  </span>
-                </div>
-              )}
+
             </div>
           </Card>
 

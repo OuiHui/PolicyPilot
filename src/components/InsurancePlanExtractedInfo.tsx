@@ -16,7 +16,7 @@ export type InsurancePlanParsedData = {
   insuranceCompany: string;
   planName: string;
   policyNumber: string;
-  groupNumber?: string;
+
 };
 
 type InsurancePlanExtractedInfoProps = {
@@ -62,7 +62,7 @@ export function InsurancePlanExtractedInfo({
   );
   const [planName, setPlanName] = useState(data.planName);
   const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
-  const [groupNumber, setGroupNumber] = useState(data.groupNumber || "");
+
 
   const handleSave = () => {
     onSave({
@@ -70,7 +70,7 @@ export function InsurancePlanExtractedInfo({
         insuranceCompany === "Other" ? customInsurer : insuranceCompany,
       planName,
       policyNumber,
-      groupNumber: groupNumber || undefined,
+
     });
   };
 
@@ -169,20 +169,7 @@ export function InsurancePlanExtractedInfo({
               </p>
             </div>
 
-            <div>
-              <label className="block text-gray-700 mb-2">
-                Group Number (Optional)
-              </label>
-              <Input
-                value={groupNumber}
-                onChange={(e) => setGroupNumber(e.target.value)}
-                placeholder="e.g., GRP987654"
-                className="w-full"
-              />
-              <p className="text-gray-500 mt-1">
-                If your insurance is through an employer, you may have a group number
-              </p>
-            </div>
+
           </div>
         </Card>
 

@@ -1,7 +1,8 @@
 import { Context } from 'hono';
-import { getOAuthClient, getAuthUrl, getAndSaveTokens } from '../utils/gmail_auth';
+import { getOAuthClient, getAuthUrl, getAndSaveTokens, getLoginAuthUrl, getUserProfile } from '../utils/gmail_auth';
 import { gmailClient } from '../utils/gmail_client';
 import { orchestrator } from '../agent/orchestrator';
+import { UserModel } from '../models/User';
 
 export const auth = async (c: Context) => {
   const oAuth2Client = await getOAuthClient();
@@ -9,27 +10,63 @@ export const auth = async (c: Context) => {
   return c.redirect(authUrl);
 };
 
+export const login = async (c: Context) => {
+  const oAuth2Client = await getOAuthClient();
+  const authUrl = getLoginAuthUrl(oAuth2Client);
+  return c.redirect(authUrl);
+};
+
 export const oauthCallback = async (c: Context) => {
   const code = c.req.query('code');
+  const state = c.req.query('state');
+
   if (!code) {
     return c.json({ error: 'Missing code' }, 400);
   }
 
   try {
     const oAuth2Client = await getOAuthClient();
-    await getAndSaveTokens(oAuth2Client, code);
-    
-    // Set up Gmail Watch
-    try {
-        await gmailClient.watchInbox('projects/hazel-tome-479901-n9/topics/gmail-notifications'); // Replace with actual topic if different
-        console.log('Gmail watch set up successfully');
-    } catch (watchError) {
-        console.error('Failed to set up Gmail watch:', watchError);
-    }
 
-    return c.json({ message: 'Authentication successful! You can now close this window.' });
+    if (state === 'login') {
+        // --- USER LOGIN FLOW ---
+        const { tokens } = await oAuth2Client.getToken(code);
+        oAuth2Client.setCredentials(tokens);
+        
+        const profile = await getUserProfile(oAuth2Client);
+        console.log('User logged in:', profile.email);
+
+        // Find or create user
+        const user = await UserModel.findOneAndUpdate(
+            { email: profile.email },
+            {
+                email: profile.email,
+                firstName: profile.given_name,
+                lastName: profile.family_name,
+                // Don't overwrite existing fields if not necessary
+            },
+            { upsert: true, new: true }
+        );
+
+        // Redirect to frontend with user info
+        // Assuming frontend is at localhost:3000
+        return c.redirect(`http://localhost:3000/login?userId=${user._id}&email=${user.email}&firstName=${user.firstName}&lastName=${user.lastName}&hipaaAccepted=${user.hipaaAccepted}`);
+    } else {
+        // --- AGENT AUTH FLOW ---
+        await getAndSaveTokens(oAuth2Client, code);
+        
+        // Set up Gmail Watch
+        try {
+            await gmailClient.watchInbox('projects/hazel-tome-479901-n9/topics/gmail-notifications'); 
+            console.log('Gmail watch set up successfully');
+        } catch (watchError) {
+            console.error('Failed to set up Gmail watch:', watchError);
+        }
+
+        // Redirect to login screen as requested
+        return c.redirect('http://localhost:3000/login');
+    }
   } catch (error) {
-    console.error('Error retrieving access token', error);
+    console.error('Error in OAuth callback', error);
     return c.json({ error: 'Authentication failed' }, 500);
   }
 };

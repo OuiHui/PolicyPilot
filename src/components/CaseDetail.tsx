@@ -59,7 +59,7 @@ type CaseDetailProps = {
   onViewEmailThread: () => void;
   userEmail?: string;
   onSubmitResponse?: (response: EmailMessage) => void;
-  onDraftFollowup?: () => void;
+  onDraftFollowup?: () => Promise<void> | void;
   insurancePlans?: InsurancePlan[];
   onEditCase?: (caseId: string, updates: Partial<Case>) => Promise<void>;
 };
@@ -88,6 +88,7 @@ export function CaseDetail({
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
 
   // Edit State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -429,12 +430,7 @@ ${email.body}`;
                     <p className="text-gray-500">Policy Number</p>
                     <p className="text-gray-900">{plan.policyNumber}</p>
                   </div>
-                  {plan.groupNumber && (
-                    <div>
-                      <p className="text-gray-500">Group Number</p>
-                      <p className="text-gray-900">{plan.groupNumber}</p>
-                    </div>
-                  )}
+
                 </div>
                 {caseItem.coveredPersonId && (
                   <div className="pt-3 border-t border-gray-200">
@@ -710,9 +706,29 @@ ${email.body}`;
               {/* Draft Follow-up Button for Received Replies */}
               {caseItem.status === 'reply-received' && onDraftFollowup && (
                 <div className="mt-4 flex justify-end">
-                  <Button onClick={onDraftFollowup} className="bg-blue-600 hover:bg-blue-700">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Draft Follow-up
+                  <Button 
+                    onClick={async () => {
+                      setIsGeneratingFollowup(true);
+                      try {
+                        await onDraftFollowup();
+                      } finally {
+                        setIsGeneratingFollowup(false);
+                      }
+                    }} 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={isGeneratingFollowup}
+                  >
+                    {isGeneratingFollowup ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Draft...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Draft Follow-up
+                      </>
+                    )}
                   </Button>
                 </div>
               )}

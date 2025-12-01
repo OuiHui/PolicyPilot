@@ -114,6 +114,46 @@ export const uploadDenialFiles = async (c: Context) => {
     }
 
     console.log('✅ Case updated with files. Total files:', updatedCase.denialFiles?.length);
+
+    // TRIGGER INGESTION IN BACKGROUND
+    // We don't await this because we want to return the response quickly.
+    // The user will see "Analyzing" status which is fine.
+    // Actually, we should probably update status to 'analyzing' (already done above)
+    // and then the analysis step will be fast.
+    
+    // Determine Python executable path (reused logic)
+    let pythonPath = "python"; 
+    if (process.platform === "win32") {
+      const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
+      if (fs.existsSync(venvPath)) pythonPath = venvPath;
+    } else {
+      const venvPath = path.join(process.cwd(), "venv", "bin", "python");
+      if (fs.existsSync(venvPath)) pythonPath = venvPath;
+    }
+
+    const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
+    const pythonEnv = {
+      ...process.env,
+      MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    };
+
+    console.log(`🚀 Triggering background ingestion for case ${id}...`);
+    const ingestProcess = spawn(pythonPath, [
+        scriptPath,
+        "--mode", "ingest",
+        "--caseId", id,
+        "--userId", updatedCase.userId // We need userId. It's in updatedCase.
+    ], {
+        env: pythonEnv,
+        cwd: process.cwd(),
+        detached: true, // Let it run even if parent exits (though here parent is server)
+        stdio: 'ignore' // Ignore output for background process
+    });
+    ingestProcess.unref(); // Don't wait for it
+
     return c.json(updatedCase);
   } catch (e: any) {
     console.error('❌ Error uploading files:', e);

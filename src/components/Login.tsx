@@ -66,14 +66,8 @@ export function Login({ onLogin }: LoginProps) {
     };
 
     const handleGoogleAuth = () => {
-        // Simulate OAuth login/signup
-        onLogin({
-            _id: "google-user-id",
-            email: "user@gmail.com",
-            firstName: "Google",
-            lastName: "User",
-            hipaaAccepted: false
-        });
+        // Redirect to backend login endpoint
+        window.location.href = "http://localhost:8000/api/gmail/login";
     };
 
     const toggleMode = () => {

@@ -10,6 +10,7 @@ import type { CoveredPerson } from './InsurancePlans';
 
 type AddInsurancePlanCoverageProps = {
   userEmail: string;
+  userName?: string;
   initialCoveredIndividuals?: CoveredPerson[];
   onContinue: (coveredIndividuals: CoveredPerson[]) => void;
   onBack: () => void;
@@ -17,6 +18,7 @@ type AddInsurancePlanCoverageProps = {
 
 export function AddInsurancePlanCoverage({
   userEmail,
+  userName,
   initialCoveredIndividuals,
   onContinue,
   onBack,
@@ -25,7 +27,7 @@ export function AddInsurancePlanCoverage({
     initialCoveredIndividuals || [
       {
         id: '1',
-        name: userEmail.split('@')[0],
+        name: userName || userEmail.split('@')[0],
         dateOfBirth: '',
         relationship: 'Self'
       }

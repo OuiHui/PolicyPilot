@@ -304,15 +304,77 @@ def load_documents(case_id: str, user_id: str) -> List[str]:
                     
     return docs
 
+def get_vector_store(case_id: str, user_id: str, force_refresh: bool = False):
+    """
+    Get or create a ChromaDB vector store for a specific case.
+    """
+    persist_dir = f"chroma_db_{case_id}"
+    embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    
+    # Try to load existing DB if not forcing refresh
+    if not force_refresh and os.path.exists(persist_dir):
+        try:
+            print(f"Loading existing ChromaDB from {persist_dir}", file=sys.stderr)
+            db = Chroma(persist_directory=persist_dir, embedding_function=embedding_function)
+            # Verify it works by doing a dummy query or checking collection
+            # If it fails, we catch and rebuild
+            return db
+        except Exception as e:
+            print(f"Error loading existing DB: {e}. Rebuilding...", file=sys.stderr)
+    
+    # Build new DB
+    print(f"Building new ChromaDB for case {case_id}...", file=sys.stderr)
+    raw_docs = load_documents(case_id, user_id)
+    
+    if not raw_docs:
+        print("No documents found to ingest.", file=sys.stderr)
+        return None
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=500,
+        length_function=len,
+        add_start_index=True,
+    )
+    chunks = text_splitter.split_documents(raw_docs)
+    print(f"Split into {len(chunks)} chunks", file=sys.stderr)
+    
+    # Clean up existing dir if it exists to ensure fresh start
+    if os.path.exists(persist_dir):
+        import shutil
+        try:
+            shutil.rmtree(persist_dir)
+        except Exception as e:
+            print(f"Warning: Could not delete existing ChromaDB directory: {e}", file=sys.stderr)
+
+    db = Chroma.from_documents(
+        documents=chunks, 
+        embedding=embedding_function, 
+        persist_directory=persist_dir
+    )
+    print(f"Created and persisted ChromaDB to {persist_dir}", file=sys.stderr)
+    return db
+
 def main():
     parser = argparse.ArgumentParser(description="RAG Pipeline for PolicyPilot")
     parser.add_argument("--caseId", required=False, help="Case ID (required for analysis/email_draft mode)")
     parser.add_argument("--userId", required=False, help="User ID (required for analysis/email_draft mode)")
-    parser.add_argument("--mode", default="analysis", choices=["analysis", "extraction", "denial_extract", "email_draft", "email_analysis", "generate_followup"], help="Pipeline mode")
+    parser.add_argument("--mode", default="analysis", choices=["analysis", "extraction", "denial_extract", "email_draft", "email_analysis", "generate_followup", "ingest"], help="Pipeline mode")
     parser.add_argument("--files", nargs="*", help="List of file paths for extraction/denial_extract mode")
     args = parser.parse_args()
 
     try:
+        if args.mode == "ingest":
+            if not args.caseId or not args.userId:
+                print(json.dumps({"error": "caseId and userId are required for ingest mode"}))
+                return
+            
+            db = get_vector_store(args.caseId, args.userId, force_refresh=True)
+            if db:
+                print(json.dumps({"success": True, "message": "Ingestion complete"}))
+            else:
+                print(json.dumps({"error": "Ingestion failed - no documents found"}))
+
         if args.mode == "extraction":
             if not args.files:
                 print(json.dumps({"error": "No files provided for extraction"}))
@@ -346,7 +408,7 @@ def main():
             print(f"DEBUG: ChromaDB created successfully with {len(chunks)} documents", file=sys.stderr)
 
             # Query for plan details
-            query = "insurance company name plan name policy number group number"
+            query = "insurance company name plan name policy number"
             print(f"DEBUG: Querying ChromaDB with: '{query}'", file=sys.stderr)
             results = db.similarity_search(query, k=4)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
@@ -360,15 +422,16 @@ def main():
             Extract the following insurance plan details from the context:
             1. Insurance Company Name
             2. Plan Name
-            3. Policy Number (Member ID)
-            4. Group Number
+            3. Policy Number (Member ID, Subscriber ID, or Policy ID)
+               - Look for alphanumeric codes (e.g., "COINDEPO...", "MIEP...", etc.) that appear near the plan name or in headers/footers.
+               - If a code like "COINDEPO052023" is prominent, it is likely the policy number.
 
             Context:
             ---
             {context_text}
             ---
 
-            Return ONLY a JSON object with keys: 'insuranceCompany', 'planName', 'policyNumber', 'groupNumber'.
+            Return ONLY a JSON object with keys: 'insuranceCompany', 'planName', 'policyNumber'.
             If a field is not found, use "Unknown".
             """
             
@@ -418,9 +481,9 @@ def main():
             print(f"DEBUG: ChromaDB created successfully with {len(chunks)} denial documents", file=sys.stderr)
 
             # Query for denial details
-            query = "denial reason claim denied service not covered medical necessity"
+            query = "denial reason"
             print(f"DEBUG: Querying ChromaDB with: '{query}'", file=sys.stderr)
-            results = db.similarity_search(query, k=3)
+            results = db.similarity_search(query, k=4)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             for i, doc in enumerate(results):
                 print(f"DEBUG: Result {i+1} preview: {doc.page_content[:150]}...", file=sys.stderr)
@@ -462,62 +525,18 @@ def main():
                 print(json.dumps({"error": "caseId and userId are required for email_draft mode"}))
                 return
 
-            # 1. Load Documents (same as analysis mode)
-            print("Loading documents for email generation...", file=sys.stderr)
-            raw_docs = load_documents(args.caseId, args.userId)
-            print(f"Loaded {len(raw_docs)} document pages", file=sys.stderr)
-
-            if not raw_docs:
-                print(json.dumps({"error": "No documents found to generate email"}))
+            # 1. Get Vector Store (Load existing or create if missing)
+            db = get_vector_store(args.caseId, args.userId, force_refresh=False)
+            
+            if not db:
+                print(json.dumps({"error": "Failed to load or create vector store"}))
                 return
 
-            # 2. Split Text (same as analysis mode)
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=500,
-                length_function=len,
-                add_start_index=True,
-            )
-            chunks = text_splitter.split_documents(raw_docs)
-            print(f"Split into {len(chunks)} chunks", file=sys.stderr)
-
-            # 3. Embed & Store (ChromaDB) - reuse same persist directory as analysis
-            print("Creating/loading vector store...", file=sys.stderr)
-            embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-            persist_dir = f"chroma_db_{args.caseId}"
-            print(f"Using persist directory: {persist_dir}", file=sys.stderr)
-            
-            # Try to load existing ChromaDB, or create new one
-            try:
-                import os
-                if os.path.exists(persist_dir):
-                    db = Chroma(
-                        persist_directory=persist_dir,
-                        embedding_function=embedding_function
-                    )
-                    print(f"Loaded existing ChromaDB from {persist_dir}", file=sys.stderr)
-                else:
-                    print(f"ChromaDB not found at {persist_dir}, creating new one", file=sys.stderr)
-                    db = Chroma.from_documents(
-                        documents=chunks,
-                        embedding=embedding_function,
-                        persist_directory=persist_dir
-                    )
-                    print(f"Created new ChromaDB with {len(chunks)} chunks", file=sys.stderr)
-            except Exception as e:
-                print(f"Error with ChromaDB, creating new one: {e}", file=sys.stderr)
-                db = Chroma.from_documents(
-                    documents=chunks,
-                    embedding=embedding_function,
-                    persist_directory=persist_dir
-                )
-                print(f"Created new ChromaDB with {len(chunks)} chunks", file=sys.stderr)
-
             # 4. Retrieval (same query as analysis)
-            query = "denial reason medical necessity policy coverage exclusions"
+            query = "denial reason policy coverage exclusions"
             print(f"Querying: {query}", file=sys.stderr)
             
-            results = db.similarity_search_with_relevance_scores(query, k=3)
+            results = db.similarity_search_with_relevance_scores(query, k=4)
             print(f"Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             
             relevant_context = []
@@ -537,41 +556,43 @@ def main():
             
             # Fetch email thread from Case
             email_context = ""
+            analysis_context = ""
             try:
-                client = get_db_connection()
-                db_mongo = client[get_db_connection().name] # Re-use connection logic or just use client.get_database() if we knew the name
-                # Actually get_db_connection returns client, but we need the db name logic again or just use the one from before?
-                # The helper function returns 'client', but prints the db name.
-                # Let's just copy the logic or simplify.
-                # We can just search for the case in all databases if we are unsure, or trust the default.
-                # But wait, get_db_connection returns a MongoClient.
-                # We need to find the database.
-                # Let's assume 'policypilot' or 'test' as per the helper.
-                # Actually, let's just use the same logic as load_documents if it exists, but load_documents is not shown here.
-                # Let's just try to find the case in the likely databases.
+                db = get_db_connection()
+                
+                # Try to find the case in the 'cases' collection
+                case_collection = None
+                if 'cases' in db.list_collection_names():
+                    case_collection = db.cases
                 
                 case_doc = None
-                for db_name in ['policypilot', 'test', 'policy']:
-                    if db_name in client.list_database_names():
-                        db_mongo = client[db_name]
-                        if 'cases' in db_mongo.list_collection_names():
-                            case_doc = db_mongo.cases.find_one({"id": args.caseId})
-                            if case_doc:
-                                break
+                if case_collection is not None:
+                    case_doc = case_collection.find_one({"id": args.caseId})
                 
-                if case_doc and 'emailThread' in case_doc and case_doc['emailThread']:
-                    print(f"Found {len(case_doc['emailThread'])} emails in thread", file=sys.stderr)
-                    email_context = "Previous Email Communication:\n"
-                    for email in case_doc['emailThread']:
-                        email_context += f"--- {email.get('type', 'unknown').upper()} ---\n"
-                        email_context += f"From: {email.get('from', 'Unknown')}\n"
-                        email_context += f"Subject: {email.get('subject', 'No Subject')}\n"
-                        email_context += f"Body: {email.get('body', '')[:1000]}...\n" # Truncate body
-                        if 'analysis' in email and email['analysis']:
-                            email_context += f"Analysis Weaknesses: {', '.join(email['analysis'].get('weaknesses', []))}\n"
-                        email_context += "\n"
+                if case_doc:
+                    if 'emailThread' in case_doc and case_doc['emailThread']:
+                        print(f"Found {len(case_doc['emailThread'])} emails in thread", file=sys.stderr)
+                        email_context = "Previous Email Communication:\n"
+                        for email in case_doc['emailThread']:
+                            email_context += f"--- {email.get('type', 'unknown').upper()} ---\n"
+                            email_context += f"From: {email.get('from', 'Unknown')}\n"
+                            email_context += f"Subject: {email.get('subject', 'No Subject')}\n"
+                            email_context += f"Body: {email.get('body', '')[:1000]}...\n" # Truncate body
+                            if 'analysis' in email and email['analysis']:
+                                email_context += f"Analysis Weaknesses: {', '.join(email['analysis'].get('weaknesses', []))}\n"
+                            email_context += "\n"
+
+                    # Fetch Denial Analysis
+                    if 'analysis' in case_doc and case_doc['analysis']:
+                        analysis_data = case_doc['analysis']
+                        analysis_context = "PREVIOUS DENIAL ANALYSIS (Use this to build your argument):\n"
+                        if 'analysis' in analysis_data:
+                            analysis_context += f"Analysis/Explanation: {analysis_data['analysis']}\n"
+                else:
+                    print(f"Case {args.caseId} not found in database", file=sys.stderr)
+
             except Exception as e:
-                print(f"Warning: Failed to fetch email thread: {e}", file=sys.stderr)
+                print(f"Warning: Failed to fetch case details: {e}", file=sys.stderr)
 
             model = genai.GenerativeModel('gemini-2.5-pro')
             
@@ -587,7 +608,7 @@ def main():
             1. Clearly state that you are representing the insured regarding the denial of their claim.
             2. Reference the specific policy sections and medical necessity criteria found in the context.
             3. If there is previous email communication, directly address the points raised in the last received email.
-            4. Use the identified weaknesses in the insurer's argument to build a strong counter-argument.
+            4. **CRITICAL**: Use the "PREVIOUS DENIAL ANALYSIS" section to identify weaknesses in the insurer's denial and build your counter-argument. The analysis provides a layman's explanation of why the denial might be invalid—translate this into professional legal arguments.
             5. Demand a specific remedy (e.g., "immediate reversal of the denial", "authorization of the service").
             6. Keep the Subject Line consistent with the thread if possible, or use a strong, clear subject like "APPEAL: [Patient Name] - [Policy Number] - [Claim Number]".
             
@@ -595,6 +616,8 @@ def main():
             ---
             {context_text}
             ---
+            
+            {analysis_context}
             
             {email_context}
             
@@ -670,50 +693,18 @@ def main():
                 print(json.dumps({"error": "caseId and userId are required for analysis mode"}))
                 return
 
-            # 1. Load Documents
-            print("Loading documents...", file=sys.stderr)
-            raw_docs = load_documents(args.caseId, args.userId)
-            print(f"Loaded {len(raw_docs)} document pages", file=sys.stderr)
-
-            if not raw_docs:
-                print(json.dumps({"error": "No documents found to analyze"}))
+            # 1. Get Vector Store (Load existing or create if missing)
+            db = get_vector_store(args.caseId, args.userId, force_refresh=False)
+            
+            if not db:
+                print(json.dumps({"error": "Failed to load or create vector store"}))
                 return
 
-            # 2. Split Text
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=500,
-                length_function=len,
-                add_start_index=True,
-            )
-            chunks = text_splitter.split_documents(raw_docs)
-            print(f"Split into {len(chunks)} chunks", file=sys.stderr)
-            
-            if chunks:
-                print(f"First chunk sample: {chunks[0].page_content[:100]}...", file=sys.stderr)
-
-            # 3. Embed & Store (ChromaDB)
-            print("Creating vector store...", file=sys.stderr)
-            embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-            print("DEBUG: Embeddings created", file=sys.stderr)
-            
-            # Use a unique persist directory per case to avoid pollution/locking issues in this simple implementation
-            # In production, you'd likely use a centralized server or properly managed collections
-            persist_dir = f"chroma_db_{args.caseId}"
-            print(f"DEBUG: Using persist directory: {persist_dir}", file=sys.stderr)
-            
-            db = Chroma.from_documents(
-                documents=chunks,
-                embedding=embedding_function,
-                persist_directory=persist_dir
-            )
-            print(f"DEBUG: ChromaDB created with {len(chunks)} chunks in {persist_dir}", file=sys.stderr)
-
             # 4. Retrieval
-            query = "denial reason medical necessity policy coverage exclusions"
+            query = "denial reason policy coverage exclusions"
             print(f"Querying: {query}", file=sys.stderr)
             
-            results = db.similarity_search_with_relevance_scores(query, k=3)
+            results = db.similarity_search_with_relevance_scores(query, k=4)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             
             relevant_context = []
@@ -748,6 +739,7 @@ def main():
             Explain in simple layman's terms why the coverage was denied based on the provided text. 
             Focus on the specific policy sections cited or relevant to the denial.
             Then point out any statements that are not supported by the policy or are weak and easier to argue against.
+            Your output will use only plain text and no markdown.
             """
             
             # Prompt 2: Terms
@@ -839,23 +831,38 @@ def main():
                 print(json.dumps({"error": "caseId and userId are required for generate_followup mode"}))
                 return
 
-            # 1. Load Documents (Policy, Denial, etc.)
-            print("Loading documents...", file=sys.stderr)
-            raw_docs = load_documents(args.caseId, args.userId)
+            # 1. Get Vector Store (Load existing or create if missing)
+            db = get_vector_store(args.caseId, args.userId, force_refresh=False)
             
-            # 2. Load Email History
+            if not db:
+                print(json.dumps({"error": "Failed to load or create vector store"}))
+                return
+
+            # 4. Retrieval
+            # We want to find policy sections relevant to the denial
+            query = "denial reason policy coverage exclusions medical necessity"
+            print(f"Querying: {query}", file=sys.stderr)
+            
+            results = db.similarity_search_with_relevance_scores(query, k=6)
+            print(f"Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
+            
+            relevant_context = []
+            for doc, score in results:
+                if score >= 0.0:
+                    relevant_context.append(doc.page_content)
+            
+            context_text = "\n\n".join(relevant_context)
+
+            # 5. Load Email History
             email_history = ""
             if args.files:
                 try:
                     with open(args.files[0], 'r') as f:
                         email_history = f.read()
                 except Exception as e:
-                    print(f"Warning: Failed to read email history file: {{e}}", file=sys.stderr)
+                    print(f"Warning: Failed to read email history file: {e}", file=sys.stderr)
 
-            # 3. Create Context
-            context_text = "\\n\\n".join([d.page_content for d in raw_docs])
-            
-            # 4. Generate Follow-up
+            # 6. Generate Follow-up
             print("Generating follow-up email...", file=sys.stderr)
             model = genai.GenerativeModel('gemini-2.5-pro')
             
@@ -863,23 +870,28 @@ def main():
             You are an expert health insurance lawyer representing a patient.
             Your goal is to write a persuasive follow-up email to the insurance company to appeal a claim denial.
             
-            Context:
-            - Policy Documents & Denial Letters:
+            **CRITICAL INSTRUCTIONS TO PREVENT HALLUCINATION**:
+            1. You must ONLY use facts and policy details explicitly present in the "Context" section below.
+            2. Do NOT invent policy section numbers, coverage limits, or medical criteria. If it's not in the text, do not mention it.
+            3. If the provided context does not contain specific policy clauses, focus on general arguments about medical necessity and the lack of clear explanation in their denial, rather than making up policy language.
+            4. Directly address the points raised in the "Email History".
+            5. **CRITICAL**: Pay close attention to the "[INTERNAL ANALYSIS]" sections in the Email History. Use the "Weaknesses Identified" to counter their arguments and incorporate the "Recommended Actions" into your requests.
+            
+            Context (Policy & Denial Details):
             ---
-            {{context_text[:20000]}} 
+            {context_text}
             ---
             
-            - Email History (Previous correspondence):
+            Email History (with Internal Analysis):
             ---
-            {{email_history}}
+            {email_history}
             ---
             
-            Instructions:
-            1. Review the email history to understand the current state of the conversation.
-            2. Use the policy documents to find specific clauses that support the patient's claim.
-            3. Address the specific reasons for denial mentioned in the history.
-            4. Be professional, firm, and persuasive.
-            5. Request specific actions (e.g., re-review, explanation of specific criteria).
+            Drafting Guidelines:
+            1. Professional, firm, and persuasive tone.
+            2. Clearly state the patient's name and policy number if available in the context.
+            3. Demand specific actions (e.g., "immediate re-evaluation", "provide specific policy language relying on").
+            4. Keep the email concise but legally grounded.
             
             Return the output as a JSON object with keys:
             - 'subject': string (The subject line for the email)
@@ -892,8 +904,8 @@ def main():
                 parsed_json = json.loads(json_str)
                 print(json.dumps(parsed_json))
             except Exception as e:
-                print(f"Error generating follow-up: {{e}}", file=sys.stderr)
-                print(json.dumps({{"error": str(e)}}))
+                print(f"Error generating follow-up: {e}", file=sys.stderr)
+                print(json.dumps({"error": str(e)}))
 
     except Exception as e:
         print(f"Pipeline Error: {e}", file=sys.stderr)

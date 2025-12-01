@@ -1,4 +1,4 @@
-import { CheckCircle, Eye, Mail, Clock, Home } from 'lucide-react';
+import { CheckCircle, Eye, Mail, Clock, Home, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -138,7 +138,7 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
           >
             {isSyncing ? (
                 <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Syncing...
                 </>
             ) : (

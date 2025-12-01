@@ -55,7 +55,7 @@ export const createPlan = async (c: Context) => {
         insuranceCompany: body.insuranceCompany as string,
         planName: body.planName as string,
         policyNumber: body.policyNumber as string,
-        groupNumber: body.groupNumber as string,
+
         policyType: body.policyType as string,
         dateAdded: body.dateAdded as string,
         coveredIndividuals: body.coveredIndividuals ? JSON.parse(body.coveredIndividuals as string) : [],

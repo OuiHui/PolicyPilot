@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // In a real app, this should be hashed
+  password: { type: String, required: false }, // Optional for OAuth users
   firstName: String,
   lastName: String,
   hipaaAccepted: { type: Boolean, default: false },

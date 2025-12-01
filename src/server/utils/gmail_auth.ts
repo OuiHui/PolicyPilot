@@ -55,12 +55,32 @@ export function getAuthUrl(oAuth2Client: OAuth2Client): string {
   });
 }
 
-/**
- * Exchange authorization code for tokens and save them.
- */
 export async function getAndSaveTokens(oAuth2Client: OAuth2Client, code: string): Promise<void> {
   const { tokens } = await oAuth2Client.getToken(code);
   oAuth2Client.setCredentials(tokens);
   await fs.promises.writeFile(TOKEN_PATH, JSON.stringify(tokens));
   console.log('Token stored to', TOKEN_PATH);
+}
+
+/**
+ * Generate the URL for user login (profile + email only).
+ */
+export function getLoginAuthUrl(oAuth2Client: OAuth2Client): string {
+  return oAuth2Client.generateAuthUrl({
+    access_type: 'online', // We don't need refresh token for simple login
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+    state: 'login', // Identify this as a login flow
+    prompt: 'select_account'
+  });
+}
+
+/**
+ * Fetch user profile using the OAuth client.
+ */
+export async function getUserProfile(oAuth2Client: OAuth2Client): Promise<any> {
+  const res = await oAuth2Client.request({ url: 'https://www.googleapis.com/oauth2/v1/userinfo' });
+  return res.data;
 }
