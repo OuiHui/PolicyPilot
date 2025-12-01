@@ -1,4 +1,5 @@
 import { CheckCircle, Eye, Mail, Clock, Home } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -13,6 +14,8 @@ type EmailSentProps = {
 
 export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: EmailSentProps) {
   const insurerName = caseItem.parsedData?.insurer || caseItem.insuranceCompany;
+  const [isSyncing, setIsSyncing] = useState(false);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,15 +108,45 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
           </div>
         </Card>
 
-        {/* Demo Button - Simulating Reply */}
-        <Card className="p-6 bg-purple-50 border-purple-200 mb-6">
-          <h3 className="text-gray-900 mb-2">Demo Mode</h3>
+        {/* Sync Button - Manual Check */}
+        <Card className="p-6 bg-blue-50 border-blue-200 mb-6">
+          <h3 className="text-gray-900 mb-2">Check for Replies</h3>
           <p className="text-gray-600 mb-4">
-            In this prototype, click below to simulate receiving a reply from the insurance company.
+            If you've received a reply in your inbox, click below to sync it with the app.
           </p>
-          <Button onClick={onViewReply} variant="outline" className="w-full">
-            <Mail className="w-4 h-4 mr-2" />
-            Simulate Reply Received
+          <Button 
+            onClick={async () => {
+                try {
+                    setIsSyncing(true);
+                    const { apiUrl } = await import('../config');
+                    const res = await fetch(apiUrl('/api/gmail/sync'), { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) {
+                        // Always check for updates, even if processed count is 0
+                        // (e.g. if we missed the update previously)
+                        onViewReply(); 
+                    }
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    setIsSyncing(false);
+                }
+            }} 
+            variant="outline" 
+            className="w-full"
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+                <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    Syncing...
+                </>
+            ) : (
+                <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Sync Emails
+                </>
+            )}
           </Button>
         </Card>
 

@@ -22,13 +22,40 @@ type FollowupReviewProps = {
   userEmail: string;
   onSend: (message: EmailMessage) => void;
   onBack: () => void;
+  initialSubject?: string;
+  initialBody?: string;
+  caseId: string;
+  emailThread: EmailMessage[];
 };
 
-export function FollowupReview({ userEmail, onSend, onBack }: FollowupReviewProps) {
+export function FollowupReview({ userEmail, onSend, onBack, initialSubject, initialBody, caseId, emailThread }: FollowupReviewProps) {
+  // Find the last received email to determine the recipient
+  const lastReceivedEmail = emailThread
+    .filter(e => e.type === 'received')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+  // Extract email from "Name <email>" format if necessary, or use default
+  const getSenderEmail = (fromStr?: string) => {
+    if (!fromStr) return 'claims@healthguard.com';
+    const match = fromStr.match(/<([^>]+)>/);
+    return match ? match[1] : fromStr;
+  };
+
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [to, setTo] = useState('claims@healthguard.com');
-  const [subject, setSubject] = useState('Re: Appeal for Claim Denial - Second Appeal');
-  const [body, setBody] = useState(
+  const [to, setTo] = useState(getSenderEmail(lastReceivedEmail?.from));
+  
+  // Use the last email's subject for the reply to ensure threading works
+  const getReplySubject = () => {
+    if (lastReceivedEmail?.subject) {
+        return lastReceivedEmail.subject.startsWith('Re:') 
+            ? lastReceivedEmail.subject 
+            : `Re: ${lastReceivedEmail.subject}`;
+    }
+    return initialSubject || 'Re: Appeal for Claim Denial';
+  };
+
+  const [subject, setSubject] = useState(getReplySubject());
+  const [body, setBody] = useState(initialBody ||
     `Dear Claims Department,
 
 Thank you for your recent correspondence regarding my appeal. After reviewing your response, I must respectfully note that several key policy and medical considerations outlined in my initial appeal were not directly addressed.
@@ -51,18 +78,60 @@ Sincerely,
 [Your Name]`
   );
 
-  const handleSend = () => {
-    const message: EmailMessage = {
-      id: Date.now().toString(),
-      from: userEmail,
-      to,
-      subject,
-      body,
-      date: new Date().toISOString(),
-      type: 'sent'
-    };
-    onSend(message);
-    setShowConfirmation(false);
+  const handleSend = async () => {
+    // Find the last received email to reply to
+    const lastReceived = emailThread
+        .filter(e => e.type === 'received')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    
+    console.log("FollowupReview: emailThread", emailThread);
+    console.log("FollowupReview: lastReceived", lastReceived);
+
+    // We need the threadId from the last email, or any email in the thread
+    // And the messageId of the last email for In-Reply-To
+    const threadId = lastReceived?.threadId;
+    const inReplyTo = lastReceived?.id; // Assuming id is the messageId for received emails
+
+    console.log("FollowupReview: threadId", threadId);
+    console.log("FollowupReview: inReplyTo", inReplyTo);
+
+    try {
+        const response = await fetch('/api/gmail/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                to,
+                subject,
+                message: body,
+                userEmail,
+                caseId,
+                threadId,
+                inReplyTo
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to send email');
+        }
+
+        const result = await response.json();
+
+        const message: EmailMessage = {
+            id: result.result?.id || Date.now().toString(),
+            from: userEmail,
+            to,
+            subject,
+            body,
+            date: new Date().toISOString(),
+            type: 'sent',
+            threadId: result.result?.threadId || threadId
+        };
+        onSend(message);
+        setShowConfirmation(false);
+    } catch (error) {
+        console.error('Error sending follow-up:', error);
+        alert('Failed to send follow-up email.');
+    }
   };
 
   return (
@@ -97,25 +166,7 @@ Sincerely,
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="to" className="text-gray-700 mb-2 block">To</Label>
-              <Input
-                id="to"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full"
-              />
-            </div>
 
-            <div>
-              <Label htmlFor="subject" className="text-gray-700 mb-2 block">Subject</Label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="w-full"
-              />
-            </div>
 
             <div>
               <Label htmlFor="body" className="text-gray-700 mb-2 block">Email Body</Label>

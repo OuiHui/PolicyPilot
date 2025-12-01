@@ -25,6 +25,21 @@ export const getCases = async (c: Context) => {
   }
 };
 
+export const getCaseById = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const caseItem = await CaseModel.findOne({ id });
+    
+    if (!caseItem) {
+      return c.json({ error: "Case not found" }, 404);
+    }
+    
+    return c.json(caseItem);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+};
+
 export const createCase = async (c: Context) => {
   try {
     const body = await c.req.json();
@@ -394,6 +409,21 @@ export const generateEmail = async (c: Context) => {
 
   } catch (e: any) {
     console.error('❌ Error generating email:', e);
+    return c.json({ error: e.message }, 500);
+  }
+};
+
+export const generateFollowup = async (c: Context) => {
+  try {
+    const id = c.req.param("id");
+    const { orchestrator } = require('../agent/orchestrator');
+    
+    // Call orchestrator to generate follow-up
+    const result = await orchestrator.generateFollowup(id);
+    
+    return c.json({ emailDraft: result });
+  } catch (e: any) {
+    console.error('❌ Error generating follow-up:', e);
     return c.json({ error: e.message }, 500);
   }
 };

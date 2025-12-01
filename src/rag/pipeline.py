@@ -308,7 +308,7 @@ def main():
     parser = argparse.ArgumentParser(description="RAG Pipeline for PolicyPilot")
     parser.add_argument("--caseId", required=False, help="Case ID (required for analysis/email_draft mode)")
     parser.add_argument("--userId", required=False, help="User ID (required for analysis/email_draft mode)")
-    parser.add_argument("--mode", default="analysis", choices=["analysis", "extraction", "denial_extract", "email_draft"], help="Pipeline mode")
+    parser.add_argument("--mode", default="analysis", choices=["analysis", "extraction", "denial_extract", "email_draft", "email_analysis", "generate_followup"], help="Pipeline mode")
     parser.add_argument("--files", nargs="*", help="List of file paths for extraction/denial_extract mode")
     args = parser.parse_args()
 
@@ -534,16 +534,69 @@ def main():
 
             # 5. Generate Email Draft
             print("Generating email draft with Gemini...", file=sys.stderr)
+            
+            # Fetch email thread from Case
+            email_context = ""
+            try:
+                client = get_db_connection()
+                db_mongo = client[get_db_connection().name] # Re-use connection logic or just use client.get_database() if we knew the name
+                # Actually get_db_connection returns client, but we need the db name logic again or just use the one from before?
+                # The helper function returns 'client', but prints the db name.
+                # Let's just copy the logic or simplify.
+                # We can just search for the case in all databases if we are unsure, or trust the default.
+                # But wait, get_db_connection returns a MongoClient.
+                # We need to find the database.
+                # Let's assume 'policypilot' or 'test' as per the helper.
+                # Actually, let's just use the same logic as load_documents if it exists, but load_documents is not shown here.
+                # Let's just try to find the case in the likely databases.
+                
+                case_doc = None
+                for db_name in ['policypilot', 'test', 'policy']:
+                    if db_name in client.list_database_names():
+                        db_mongo = client[db_name]
+                        if 'cases' in db_mongo.list_collection_names():
+                            case_doc = db_mongo.cases.find_one({"id": args.caseId})
+                            if case_doc:
+                                break
+                
+                if case_doc and 'emailThread' in case_doc and case_doc['emailThread']:
+                    print(f"Found {len(case_doc['emailThread'])} emails in thread", file=sys.stderr)
+                    email_context = "Previous Email Communication:\n"
+                    for email in case_doc['emailThread']:
+                        email_context += f"--- {email.get('type', 'unknown').upper()} ---\n"
+                        email_context += f"From: {email.get('from', 'Unknown')}\n"
+                        email_context += f"Subject: {email.get('subject', 'No Subject')}\n"
+                        email_context += f"Body: {email.get('body', '')[:1000]}...\n" # Truncate body
+                        if 'analysis' in email and email['analysis']:
+                            email_context += f"Analysis Weaknesses: {', '.join(email['analysis'].get('weaknesses', []))}\n"
+                        email_context += "\n"
+            except Exception as e:
+                print(f"Warning: Failed to fetch email thread: {e}", file=sys.stderr)
+
             model = genai.GenerativeModel('gemini-2.5-pro')
             
             email_prompt = f"""
-            Draft a professional appeal email to the insurance company based on the context.
-            Adopt the persona of a professional health insurance lawyer or advocate. Do not use layman's terms here; use professional language.
+            Draft a professional appeal email (or follow-up) to the insurance company based on the context.
+            
+            **ROLE & PERSONA**:
+            You are a specialized Health Insurance Denial Lawyer acting on behalf of your client (the insured). 
+            Write in the first person plural ("We", "Our firm") or as the legal representative ("I am writing on behalf of my client...").
+            Your tone should be professional, firm, authoritative, and legally grounded. Do not be aggressive, but be assertive.
+            
+            **INSTRUCTIONS**:
+            1. Clearly state that you are representing the insured regarding the denial of their claim.
+            2. Reference the specific policy sections and medical necessity criteria found in the context.
+            3. If there is previous email communication, directly address the points raised in the last received email.
+            4. Use the identified weaknesses in the insurer's argument to build a strong counter-argument.
+            5. Demand a specific remedy (e.g., "immediate reversal of the denial", "authorization of the service").
+            6. Keep the Subject Line consistent with the thread if possible, or use a strong, clear subject like "APPEAL: [Patient Name] - [Policy Number] - [Claim Number]".
             
             Context:
             ---
             {context_text}
             ---
+            
+            {email_context}
             
             Return the output as a JSON object with 'subject' and 'body' keys.
             """
@@ -566,7 +619,53 @@ def main():
             print("Successfully generated email draft", file=sys.stderr)
             print(json.dumps(output))
 
-        else: # Analysis Mode
+        elif args.mode == "email_analysis":
+            if not args.files:
+                print(json.dumps({"error": "No file provided for email analysis"}))
+                return
+
+            # Read email content from file
+            try:
+                with open(args.files[0], 'r') as f:
+                    email_content = f.read()
+            except Exception as e:
+                print(json.dumps({"error": f"Failed to read email file: {e}"}))
+                return
+
+            print("Analyzing email content with Gemini...", file=sys.stderr)
+            model = genai.GenerativeModel('gemini-2.5-pro')
+            
+            prompt = f"""
+            You are an expert legal assistant for health insurance appeals.
+            Analyze the following incoming email from an insurance company or provider.
+            
+            Email Content:
+            ---
+            {email_content}
+            ---
+            
+            1. Summarize the email in simple layman's terms.
+            2. Identify any weaknesses in their argument or points that are vague/unsupported.
+            3. Identify any confusing terms and define them. **CRITICAL: The 'term' MUST be an EXACT substring found in the email content above. Do not rephrase the term.**
+            4. Suggest 2-3 concrete action items for the user.
+            
+            Return the output as a JSON object with keys:
+            - 'summary': string
+            - 'weaknesses': list of strings
+            - 'terms': list of objects {{ 'term': string, 'definition': string }} (term must be exact match from text)
+            - 'actionItems': list of strings
+            """
+            
+            try:
+                response = model.generate_content(prompt)
+                json_str = response.text.strip().replace('```json', '').replace('```', '')
+                parsed_json = json.loads(json_str)
+                print(json.dumps(parsed_json))
+            except Exception as e:
+                print(f"Error analyzing email: {e}", file=sys.stderr)
+                print(json.dumps({"error": str(e)}))
+
+        elif args.mode == "analysis":
             if not args.caseId or not args.userId:
                 print(json.dumps({"error": "caseId and userId are required for analysis mode"}))
                 return
@@ -693,9 +792,114 @@ def main():
             print("Successfully generated analysis output", file=sys.stderr)
             print(json.dumps(output))
 
+        elif args.mode == 'email_analysis':
+            if not args.files:
+                print(json.dumps({"error": "No files provided for email analysis"}))
+                return
+
+            try:
+                with open(args.files[0], 'r') as f:
+                    email_content = f.read()
+                    
+                print("Analyzing email content with Gemini...", file=sys.stderr)
+                model = genai.GenerativeModel('gemini-2.5-pro')
+                
+                prompt = f"""
+                You are an expert legal assistant for health insurance appeals.
+                Analyze the following incoming email from an insurance company or provider.
+                
+                Email Content:
+                ---
+                {{email_content}}
+                ---
+                
+                1. Summarize the email in simple layman's terms.
+                2. Identify any weaknesses in their argument or points that are vague/unsupported.
+                3. Identify any confusing terms and define them. **CRITICAL: The 'term' MUST be an EXACT substring found in the email content above. Do not rephrase the term.**
+                4. Suggest 2-3 concrete action items for the user.
+                
+                Return the output as a JSON object with keys:
+                - 'summary': string
+                - 'weaknesses': list of strings
+                - 'terms': list of objects {{ 'term': string, 'definition': string }} (term must be exact match from text)
+                - 'actionItems': list of strings
+                """
+                
+                response = model.generate_content(prompt)
+                json_str = response.text.strip().replace('```json', '').replace('```', '')
+                parsed_json = json.loads(json_str)
+                print(json.dumps(parsed_json))
+                
+            except Exception as e:
+                print(f"Error analyzing email: {{e}}", file=sys.stderr)
+                print(json.dumps({{"error": str(e)}}))
+
+        elif args.mode == 'generate_followup':
+            if not args.caseId or not args.userId:
+                print(json.dumps({"error": "caseId and userId are required for generate_followup mode"}))
+                return
+
+            # 1. Load Documents (Policy, Denial, etc.)
+            print("Loading documents...", file=sys.stderr)
+            raw_docs = load_documents(args.caseId, args.userId)
+            
+            # 2. Load Email History
+            email_history = ""
+            if args.files:
+                try:
+                    with open(args.files[0], 'r') as f:
+                        email_history = f.read()
+                except Exception as e:
+                    print(f"Warning: Failed to read email history file: {{e}}", file=sys.stderr)
+
+            # 3. Create Context
+            context_text = "\\n\\n".join([d.page_content for d in raw_docs])
+            
+            # 4. Generate Follow-up
+            print("Generating follow-up email...", file=sys.stderr)
+            model = genai.GenerativeModel('gemini-2.5-pro')
+            
+            prompt = f"""
+            You are an expert health insurance lawyer representing a patient.
+            Your goal is to write a persuasive follow-up email to the insurance company to appeal a claim denial.
+            
+            Context:
+            - Policy Documents & Denial Letters:
+            ---
+            {{context_text[:20000]}} 
+            ---
+            
+            - Email History (Previous correspondence):
+            ---
+            {{email_history}}
+            ---
+            
+            Instructions:
+            1. Review the email history to understand the current state of the conversation.
+            2. Use the policy documents to find specific clauses that support the patient's claim.
+            3. Address the specific reasons for denial mentioned in the history.
+            4. Be professional, firm, and persuasive.
+            5. Request specific actions (e.g., re-review, explanation of specific criteria).
+            
+            Return the output as a JSON object with keys:
+            - 'subject': string (The subject line for the email)
+            - 'body': string (The body of the email)
+            """
+            
+            try:
+                response = model.generate_content(prompt)
+                json_str = response.text.strip().replace('```json', '').replace('```', '')
+                parsed_json = json.loads(json_str)
+                print(json.dumps(parsed_json))
+            except Exception as e:
+                print(f"Error generating follow-up: {{e}}", file=sys.stderr)
+                print(json.dumps({{"error": str(e)}}))
+
     except Exception as e:
         print(f"Pipeline Error: {e}", file=sys.stderr)
         print(json.dumps({"error": str(e)}))
+
+
 
 if __name__ == "__main__":
     main()

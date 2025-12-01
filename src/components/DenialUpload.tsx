@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   X,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -26,7 +27,7 @@ type DenialFile = File | { name: string; size: number; type: string; bucket?: st
 
 type DenialUploadProps = {
   initialFiles?: DenialFile[];
-  onContinue: (files: DenialFile[]) => void;
+  onContinue: (files: DenialFile[]) => Promise<void> | void;
   onBack: () => void;
   onDelete?: () => void;
 };
@@ -41,6 +42,7 @@ export function DenialUpload({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -79,6 +81,16 @@ export function DenialUpload({
 
   const handleRemoveFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const handleContinue = async () => {
+    setIsExtracting(true);
+    try {
+        await onContinue(files);
+    } catch (error) {
+        console.error("Error continuing:", error);
+        setIsExtracting(false);
+    }
   };
 
   const progressSteps = [
@@ -210,13 +222,22 @@ export function DenialUpload({
             )}
           </div>
           <Button
-            onClick={() => onContinue(files)}
-            disabled={files.length === 0}
+            onClick={handleContinue}
+            disabled={files.length === 0 || isExtracting}
             size="lg"
             className="px-8"
           >
-            Continue
-            <ArrowRight className="ml-2 w-5 h-5" />
+            {isExtracting ? (
+                <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Extracting Denial Information...
+                </>
+            ) : (
+                <>
+                    Continue
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+            )}
           </Button>
         </div>
       </div>

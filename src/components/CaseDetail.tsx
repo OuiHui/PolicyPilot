@@ -14,8 +14,10 @@ import {
   Pencil,
   X,
   Copy,
-  Check
+  Check,
+  Loader2 // Import Loader2
 } from "lucide-react";
+
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -85,6 +87,7 @@ export function CaseDetail({
   const [deleteFileIndex, setDeleteFileIndex] = useState<number | null>(null);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Edit State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -638,6 +641,39 @@ ${email.body}`;
                   View Email Thread
                 </Button>
               </div>
+              
+              <div className="flex justify-end mb-4">
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={isSyncing}
+                    onClick={async () => {
+                        try {
+                            setIsSyncing(true);
+                            const res = await fetch(apiUrl('/api/gmail/sync'), { method: 'POST' });
+                            const data = await res.json();
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Sync failed.');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            alert('Sync error.');
+                        } finally {
+                            setIsSyncing(false);
+                        }
+                    }}
+                >
+                    {isSyncing ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                    )}
+                    {isSyncing ? "Syncing..." : "Sync Emails"}
+                </Button>
+              </div>
+              
               <div className="space-y-4">
                 {caseItem.emailThread.map((email) => (
                   <div key={email.id} className={`p-4 rounded-lg border ${email.type === 'sent' ? 'bg-blue-50 border-blue-100 ml-8' : 'bg-gray-50 border-gray-200 mr-8'}`}>

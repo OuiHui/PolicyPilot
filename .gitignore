@@ -7,6 +7,8 @@ dist
 .env.*
 .DS_Store
 chroma_db_*
+token.json
+docs/
 
 # Python
 venv/
