@@ -177,7 +177,7 @@ Sincerely,
           <AlertDialogHeader>
             <AlertDialogTitle>Send Appeal Email?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send your appeal email to {to} from {userEmail}.
+              This will send your appeal email to {to} from policypilotco@gmail.com on your behalf.
               Make sure you've reviewed all the details carefully.
             </AlertDialogDescription>
           </AlertDialogHeader>

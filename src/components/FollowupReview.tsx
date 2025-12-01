@@ -147,7 +147,8 @@ Sincerely,
           <AlertDialogHeader>
             <AlertDialogTitle>Send Follow-up Email?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send your follow-up email to {to} from {userEmail}.
+              This will send your follow-up email to {to} from policypilotco@gmail.com on your behalf.
+              Make sure you've reviewed all the details carefully.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
