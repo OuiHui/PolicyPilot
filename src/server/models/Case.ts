@@ -50,6 +50,15 @@ const caseSchema = new mongoose.Schema({
   hasNewEmail: Boolean,
   denialFiles: [fileSchema],
   parsedData: parsedDataSchema,
+  analysis: {
+    analysis: String,
+    terms: [{ term: String, definition: String }],
+    contextUsed: [String],
+  },
+  emailDraft: {
+    subject: String,
+    body: String,
+  },
   emailThread: [emailMessageSchema],
   resolved: Boolean,
   resolvedDate: String,

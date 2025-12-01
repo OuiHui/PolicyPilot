@@ -77,6 +77,15 @@ export type Case = {
   denialFiles: (File | { name: string; size: number; type: string; bucket?: string; path?: string })[];
   parsedData: ParsedData | null;
   emailThread: EmailMessage[];
+  analysis?: {
+    analysis: string;
+    terms: { term: string; definition: string }[];
+    contextUsed: string[];
+  };
+  emailDraft?: {
+    subject: string;
+    body: string;
+  };
   resolved?: boolean;
   resolvedDate?: string;
   feedback?: string;
@@ -582,11 +591,16 @@ export default function App() {
 
         const allFiles = [...existingFiles, ...uploadedNewFiles];
 
-        // Use updateCaseInDb (PATCH) to sync the full list
-        updatedCase = await updateCaseInDb(currentCaseId, {
-          denialFiles: allFiles,
-          status: 'analyzing'
-        });
+        // Only update DB if we actually added files
+        if (newFiles.length > 0) {
+          updatedCase = await updateCaseInDb(currentCaseId, {
+            denialFiles: allFiles,
+            status: 'analyzing'
+          });
+        } else {
+          // No new files, just get current case state
+          updatedCase = getCurrentCase();
+        }
 
       } else {
         // Fallback: Direct upload (limited to 4.5MB on Vercel)
@@ -605,8 +619,13 @@ export default function App() {
             updatedCase = await response.json();
           }
         } else {
-          const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
-          if (response.ok) updatedCase = await response.json();
+          // No new files, just get current case state
+          updatedCase = getCurrentCase();
+          // Fallback fetch if not in state (though it should be)
+          if (!updatedCase) {
+            const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
+            if (response.ok) updatedCase = await response.json();
+          }
         }
       }
 

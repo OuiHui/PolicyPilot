@@ -80,7 +80,17 @@ export const uploadDenialFiles = async (c: Context) => {
 
     const updatedCase = await CaseModel.findOneAndUpdate(
       { id },
-      { $push: { denialFiles: { $each: denialFiles } }, status: "analyzing" },
+      {
+        $push: { denialFiles: { $each: denialFiles } },
+        status: "analyzing",
+        // Clear cached AI results when new files are uploaded
+        $unset: {
+          parsedData: "",
+          denialReasonTitle: "",
+          analysis: "",
+          emailDraft: ""
+        }
+      },
       { new: true }
     );
 
@@ -101,9 +111,20 @@ export const updateCase = async (c: Context) => {
     const id = c.req.param("id");
     const body = await c.req.json();
 
+    // If denialFiles are being updated, clear cached AI results
+    const updateQuery = { ...body };
+    if (body.denialFiles) {
+      updateQuery.$unset = {
+        parsedData: "",
+        denialReasonTitle: "",
+        analysis: "",
+        emailDraft: ""
+      };
+    }
+
     const updatedCase = await CaseModel.findOneAndUpdate(
       { id },
-      body,
+      updateQuery,
       { new: true }
     );
 
@@ -122,10 +143,39 @@ export const updateCase = async (c: Context) => {
 export const deleteCase = async (c: Context) => {
   try {
     const id = c.req.param("id");
-    const deletedCase = await CaseModel.findOneAndDelete({ id });
-    if (!deletedCase) {
+
+    // Find case first to get files
+    const caseToDelete = await CaseModel.findOne({ id });
+
+    if (!caseToDelete) {
       return c.json({ error: "Case not found" }, 404);
     }
+
+    // Delete files from Supabase if they exist
+    if (caseToDelete.denialFiles && caseToDelete.denialFiles.length > 0 && supabaseServer) {
+      console.log(`🗑️ Deleting ${caseToDelete.denialFiles.length} files for case ${id}`);
+
+      for (const file of caseToDelete.denialFiles) {
+        if (file.path) {
+          try {
+            const bucket = file.bucket || "denials";
+            const { error } = await supabaseServer.storage
+              .from(bucket)
+              .remove([file.path]);
+
+            if (error) {
+              console.error(`❌ Error deleting file ${file.path} from Supabase:`, error);
+            } else {
+              console.log(`✅ Deleted file from Supabase: ${file.path}`);
+            }
+          } catch (err) {
+            console.error(`❌ Exception deleting file ${file.path}:`, err);
+          }
+        }
+      }
+    }
+
+    const deletedCase = await CaseModel.findOneAndDelete({ id });
     return c.json({ message: "Case deleted successfully" });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -139,6 +189,13 @@ export const analyzeCase = async (c: Context) => {
 
     if (!userId) {
       return c.json({ error: "User ID is required" }, 400);
+    }
+
+    // Check cache first
+    const existingCase = await CaseModel.findOne({ id });
+    if (existingCase?.analysis?.analysis) {
+      console.log(`🧠 Returning cached analysis for case ${id}`);
+      return c.json(existingCase.analysis);
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
@@ -211,6 +268,14 @@ export const analyzeCase = async (c: Context) => {
           if (result.error) {
             resolve(c.json({ error: result.error }, 400));
           } else {
+            // Save result to DB
+            CaseModel.findOneAndUpdate(
+              { id },
+              { analysis: result },
+              { new: true }
+            ).then(() => console.log(`💾 Saved analysis to DB for case ${id}`))
+              .catch(err => console.error(`❌ Failed to save analysis to DB: ${err}`));
+
             resolve(c.json(result));
           }
         } catch (e) {
@@ -233,6 +298,13 @@ export const generateEmail = async (c: Context) => {
 
     if (!userId) {
       return c.json({ error: "User ID is required" }, 400);
+    }
+
+    // Check cache first
+    const existingCase = await CaseModel.findOne({ id });
+    if (existingCase?.emailDraft?.body) {
+      console.log(`🧠 Returning cached email draft for case ${id}`);
+      return c.json({ emailDraft: existingCase.emailDraft });
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
@@ -302,6 +374,15 @@ export const generateEmail = async (c: Context) => {
           if (result.error) {
             resolve(c.json({ error: result.error }, 400));
           } else {
+            // Save result to DB
+            if (result.emailDraft) {
+              CaseModel.findOneAndUpdate(
+                { id },
+                { emailDraft: result.emailDraft },
+                { new: true }
+              ).then(() => console.log(`💾 Saved email draft to DB for case ${id}`))
+                .catch(err => console.error(`❌ Failed to save email draft to DB: ${err}`));
+            }
             resolve(c.json(result));
           }
         } catch (e) {
@@ -329,6 +410,12 @@ export const extractDenial = async (c: Context) => {
 
     if (!caseData.denialFiles || caseData.denialFiles.length === 0) {
       return c.json({ error: "No denial files found for this case" }, 400);
+    }
+
+    // Check cache first
+    if (caseData.denialReasonTitle) {
+      console.log(`🧠 Returning cached denial extraction for case ${id}`);
+      return c.json({ briefDescription: caseData.denialReasonTitle });
     }
 
     // Create temp directory for files

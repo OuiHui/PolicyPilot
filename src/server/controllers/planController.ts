@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { spawn } from "child_process";
+import { supabaseServer } from "../supabase/client";
 
 export const getPlans = async (c: Context) => {
   try {
@@ -75,10 +76,39 @@ export const createPlan = async (c: Context) => {
 export const deletePlan = async (c: Context) => {
   try {
     const id = c.req.param("id");
-    const plan = await InsurancePlanModel.findOneAndDelete({ id });
-    if (!plan) {
+
+    // Find plan first to get files
+    const planToDelete = await InsurancePlanModel.findOne({ id });
+
+    if (!planToDelete) {
       return c.json({ error: "Plan not found" }, 404);
     }
+
+    // Delete files from Supabase if they exist
+    if (planToDelete.policyFiles && planToDelete.policyFiles.length > 0 && supabaseServer) {
+      console.log(`🗑️ Deleting ${planToDelete.policyFiles.length} files for plan ${id}`);
+
+      for (const file of planToDelete.policyFiles) {
+        if (file.path) {
+          try {
+            const bucket = file.bucket || "policies";
+            const { error } = await supabaseServer.storage
+              .from(bucket)
+              .remove([file.path]);
+
+            if (error) {
+              console.error(`❌ Error deleting file ${file.path} from Supabase:`, error);
+            } else {
+              console.log(`✅ Deleted file from Supabase: ${file.path}`);
+            }
+          } catch (err) {
+            console.error(`❌ Exception deleting file ${file.path}:`, err);
+          }
+        }
+      }
+    }
+
+    const plan = await InsurancePlanModel.findOneAndDelete({ id });
     return c.json({ message: "Plan deleted successfully" });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
