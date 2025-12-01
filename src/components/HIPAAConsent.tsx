@@ -85,11 +85,11 @@ export function HIPAAConsent({ onAccept }: HIPAAConsentProps) {
         {/* Consent Checkboxes */}
         <Card className="p-6 mb-6">
           <div className="space-y-4">
-            <label className="flex items-start gap-3 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-default">
               <Checkbox 
                 checked={termsAccepted}
                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-                className="mt-1"
+                className="mt-1 cursor-pointer"
               />
               <div>
                 <span className="text-gray-900">I agree to the Terms of Service</span>
@@ -99,11 +99,11 @@ export function HIPAAConsent({ onAccept }: HIPAAConsentProps) {
               </div>
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-default">
               <Checkbox 
                 checked={privacyAccepted}
                 onCheckedChange={(checked) => setPrivacyAccepted(checked === true)}
-                className="mt-1"
+                className="mt-1 cursor-pointer"
               />
               <div>
                 <span className="text-gray-900">I acknowledge the Privacy Policy and HIPAA Authorization</span>
@@ -113,11 +113,11 @@ export function HIPAAConsent({ onAccept }: HIPAAConsentProps) {
               </div>
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-default">
               <Checkbox 
                 checked={processingConsent}
                 onCheckedChange={(checked) => setProcessingConsent(checked === true)}
-                className="mt-1"
+                className="mt-1 cursor-pointer"
               />
               <div>
                 <span className="text-gray-900">I consent to PolicyPilot accessing and processing my health information for appeal purposes</span>
@@ -132,7 +132,7 @@ export function HIPAAConsent({ onAccept }: HIPAAConsentProps) {
         <Button 
           onClick={onAccept}
           disabled={!canProceed}
-          className="w-full"
+          className="w-full cursor-pointer"
           size="lg"
         >
           I Understand & Continue
