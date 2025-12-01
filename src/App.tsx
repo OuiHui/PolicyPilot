@@ -778,9 +778,13 @@ export default function App() {
     ));
   };
 
+  const handleUserUpdate = (updatedUser: any) => {
+    setUser(updatedUser);
+    setUserEmail(updatedUser.email);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setHasAcceptedHIPAA(false);
     setIsLoggedIn(false);
     setHasAcceptedHIPAA(false);
     setUser(null);
@@ -790,6 +794,10 @@ export default function App() {
     setInsurancePlans([]);
     setCurrentPlanId(null);
     setPlanDraft(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentScreen');
+    localStorage.removeItem('currentCaseId');
     setCurrentScreen("login");
   };
 
@@ -822,7 +830,7 @@ export default function App() {
         />;
 
       case 'settings':
-        return <Settings userEmail={userEmail} onLogout={handleLogout} />;
+        return <Settings user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
 
       // Insurance Plans Management
       case 'insurance-plans':

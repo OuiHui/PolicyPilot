@@ -7,7 +7,7 @@ import { Input } from "./input";
 
 interface AuthFormProps {
     heading?: string;
-    onSubmit?: (email: string, password: string) => void;
+    onSubmit?: (email: string, password: string, firstName?: string, lastName?: string) => void;
     onGoogleSignup?: () => void;
     mode?: "signup" | "login";
     onToggleMode?: () => void;
@@ -24,11 +24,17 @@ const AuthForm = ({
 }: AuthFormProps) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (onSubmit && email && password) {
-            onSubmit(email, password);
+            if (mode === "signup") {
+                onSubmit(email, password, firstName, lastName);
+            } else {
+                onSubmit(email, password);
+            }
         }
     };
 
@@ -78,6 +84,24 @@ const AuthForm = ({
                     onSubmit={handleSubmit}
                     className="flex w-full flex-col gap-6"
                 >
+                    {mode === "signup" && (
+                        <>
+                            <Input
+                                type="text"
+                                placeholder="First Name"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                required
+                            />
+                            <Input
+                                type="text"
+                                placeholder="Last Name"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                required
+                            />
+                        </>
+                    )}
                     <Input
                         type="email"
                         placeholder="Email"

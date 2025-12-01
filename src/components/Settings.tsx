@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
-import { 
+import { Input } from './ui/input';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -13,30 +15,59 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { LogOut } from 'lucide-react';
+import { apiUrl } from '../config';
 
 type SettingsProps = {
-  userEmail: string;
+  user: any;
   onLogout: () => void;
+  onUserUpdate: (updatedUser: any) => void;
 };
 
-export function Settings({ userEmail, onLogout }: SettingsProps) {
-  // Extract first and last name from email (simple implementation)
-  const getNameFromEmail = (email: string) => {
-    const namePart = email.split('@')[0];
-    const parts = namePart.split('.');
-    if (parts.length >= 2) {
-      return {
-        firstName: parts[0].charAt(0).toUpperCase() + parts[0].slice(1),
-        lastName: parts[1].charAt(0).toUpperCase() + parts[1].slice(1)
-      };
+export function Settings({ user, onLogout, onUserUpdate }: SettingsProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSave = async () => {
+    if (!user?._id) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const response = await fetch(apiUrl(`/api/users/${user._id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName }),
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        onUserUpdate(updatedUser);
+        setIsEditing(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setSaveError('Failed to update profile. Please try again.');
+      }
+    } catch (err) {
+      setSaveError('Network error. Please check your connection.');
+      console.error(err);
+    } finally {
+      setIsSaving(false);
     }
-    return {
-      firstName: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-      lastName: ''
-    };
   };
 
-  const { firstName, lastName } = getNameFromEmail(userEmail);
+  const handleCancel = () => {
+    setFirstName(user?.firstName || '');
+    setLastName(user?.lastName || '');
+    setIsEditing(false);
+    setSaveError(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -49,49 +80,110 @@ export function Settings({ userEmail, onLogout }: SettingsProps) {
           </p>
         </div>
 
+        {/* Success Message */}
+        {saveSuccess && (
+          <div className="mb-6 bg-green-50 text-green-600 text-sm p-4 rounded-md border border-green-200">
+            Profile updated successfully!
+          </div>
+        )}
+
         {/* User Information Card */}
         <Card className="p-8 mb-8">
-          <h2 className="text-gray-900 mb-6">User Information</h2>
-          
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-gray-900">User Information</h2>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Profile
+              </Button>
+            )}
+          </div>
+
           <div className="space-y-6">
             {/* First Name */}
             <div className="space-y-2">
               <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
-              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
-                {firstName}
-              </div>
-              <p className="text-gray-500">From your connected Google account</p>
+              {isEditing ? (
+                <Input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Enter first name"
+                />
+              ) : (
+                <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                  {firstName || 'Not provided'}
+                </div>
+              )}
             </div>
 
             {/* Last Name */}
             <div className="space-y-2">
               <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
-              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
-                {lastName || 'N/A'}
-              </div>
-              <p className="text-gray-500">From your connected Google account</p>
+              {isEditing ? (
+                <Input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Enter last name"
+                />
+              ) : (
+                <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                  {lastName || 'Not provided'}
+                </div>
+              )}
             </div>
 
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-700">Email Address</Label>
               <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
-                {userEmail}
+                {user?.email || 'Not provided'}
               </div>
-              <p className="text-gray-500">Your OAuth email address</p>
+              <p className="text-gray-500">Email cannot be changed</p>
             </div>
+
+            {/* Error Message */}
+            {saveError && (
+              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-200">
+                {saveError}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {isEditing && (
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Account Actions Card */}
         <Card className="p-8">
           <h2 className="text-gray-900 mb-6">Account Actions</h2>
-          
+
           <div className="space-y-4">
             <p className="text-gray-600 mb-4">
               Signing out will end your current session and return you to the login screen.
             </p>
-            
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="lg" className="w-full sm:w-auto">
@@ -108,7 +200,7 @@ export function Settings({ userEmail, onLogout }: SettingsProps) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
+                  <AlertDialogAction
                     onClick={onLogout}
                     className="bg-red-600 hover:bg-red-700"
                   >

@@ -11,7 +11,7 @@ export function Login({ onLogin }: LoginProps) {
 
     const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (email: string, password: string) => {
+    const handleSubmit = async (email: string, password: string, firstName?: string, lastName?: string) => {
         setError(null);
         if (mode === "login") {
             try {
@@ -39,15 +39,15 @@ export function Login({ onLogin }: LoginProps) {
             }
         } else {
             try {
-                // For now, we'll split the email to get first/last name or just use placeholders
-                // In a real app, we'd add fields for names
-                const firstName = "New";
-                const lastName = "User";
-
                 const response = await fetch(apiUrl("/api/users"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password, firstName, lastName }),
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        firstName: firstName || "",
+                        lastName: lastName || ""
+                    }),
                 });
 
                 if (response.ok) {

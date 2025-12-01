@@ -167,6 +167,10 @@ export const analyzeCase = async (c: Context) => {
       VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
     };
 
+    console.log("DEBUG: Python Env Vars:");
+    console.log("MONGODB_URI:", pythonEnv.MONGODB_URI ? pythonEnv.MONGODB_URI.replace(/:([^:@]+)@/, ":****@") : "undefined");
+    console.log("GEMINI_API_KEY:", pythonEnv.GEMINI_API_KEY ? "Set" : "Not Set");
+
     return new Promise((resolve, reject) => {
       const pythonProcess = spawn(pythonPath, [
         scriptPath,

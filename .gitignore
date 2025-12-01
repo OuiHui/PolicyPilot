@@ -7,3 +7,10 @@ dist
 .env.*
 .DS_Store
 chroma_db_*
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
