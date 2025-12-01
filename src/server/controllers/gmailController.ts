@@ -28,45 +28,46 @@ export const oauthCallback = async (c: Context) => {
     const oAuth2Client = await getOAuthClient();
 
     if (state === 'login') {
-        // --- USER LOGIN FLOW ---
-        const { tokens } = await oAuth2Client.getToken(code);
-        oAuth2Client.setCredentials(tokens);
-        
-        const profile = await getUserProfile(oAuth2Client);
-        console.log('User logged in:', profile.email);
+      // --- USER LOGIN FLOW ---
+      const { tokens } = await oAuth2Client.getToken(code);
+      oAuth2Client.setCredentials(tokens);
 
-        // Find or create user
-        const user = await UserModel.findOneAndUpdate(
-            { email: profile.email },
-            {
-                email: profile.email,
-                firstName: profile.given_name,
-                lastName: profile.family_name,
-                // Don't overwrite existing fields if not necessary
-            },
-            { upsert: true, new: true }
-        );
+      const profile = await getUserProfile(oAuth2Client);
+      console.log('User logged in:', profile.email);
 
-        // Redirect to frontend with user info
-        // Assuming frontend is at localhost:3000
-        return c.redirect(`http://localhost:3000/login?userId=${user._id}&email=${user.email}&firstName=${user.firstName}&lastName=${user.lastName}&hipaaAccepted=${user.hipaaAccepted}`);
+      // Find or create user
+      const user = await UserModel.findOneAndUpdate(
+        { email: profile.email },
+        {
+          email: profile.email,
+          firstName: profile.given_name,
+          lastName: profile.family_name,
+          // Don't overwrite existing fields if not necessary
+        },
+        { upsert: true, new: true }
+      );
+
+      // Redirect to frontend with user info
+      // Assuming frontend is at localhost:3000
+      return c.redirect(`http://localhost:3000/login?userId=${user._id}&email=${user.email}&firstName=${user.firstName}&lastName=${user.lastName}&hipaaAccepted=${user.hipaaAccepted}`);
     } else {
-        // --- AGENT AUTH FLOW ---
-        await getAndSaveTokens(oAuth2Client, code);
-        
-        // Set up Gmail Watch
-        try {
-            await gmailClient.watchInbox('projects/hazel-tome-479901-n9/topics/gmail-notifications'); 
-            console.log('Gmail watch set up successfully');
-        } catch (watchError) {
-            console.error('Failed to set up Gmail watch:', watchError);
-        }
+      // --- AGENT AUTH FLOW ---
+      await getAndSaveTokens(oAuth2Client, code);
 
-        // Redirect to login screen as requested
-        return c.redirect('http://localhost:3000/login');
+      // Set up Gmail Watch
+      try {
+        await gmailClient.watchInbox('projects/hazel-tome-479901-n9/topics/gmail-notifications');
+        console.log('Gmail watch set up successfully');
+      } catch (watchError) {
+        console.error('Failed to set up Gmail watch:', watchError);
+      }
+
+      // Redirect to login screen as requested
+      return c.redirect('http://localhost:3000/login');
     }
   } catch (error) {
     console.error('Error in OAuth callback', error);
+    require('fs').writeFileSync('error.log', JSON.stringify(error, Object.getOwnPropertyNames(error)) + '\n' + String(error));
     return c.json({ error: 'Authentication failed' }, 500);
   }
 };
@@ -82,21 +83,21 @@ export const sendEmail = async (c: Context) => {
 
     // 1. Send the email
     const result = await gmailClient.sendEmail(to, subject, message, threadId, inReplyTo);
-    
+
     // 2. Apply label if userEmail is provided
     if (userEmail && result.id) {
-        try {
-            // Create or get label for this user
-            const label = await gmailClient.createLabel(userEmail);
-            if (label && label.id) {
-                // Apply label to the sent message (and thus the thread)
-                await gmailClient.addLabel(result.id, label.id);
-                console.log(`Applied label ${userEmail} to message ${result.id}`);
-            }
-        } catch (labelError) {
-            console.error('Error applying label:', labelError);
-            // Don't fail the request if labeling fails, but log it
+      try {
+        // Create or get label for this user
+        const label = await gmailClient.createLabel(userEmail);
+        if (label && label.id) {
+          // Apply label to the sent message (and thus the thread)
+          await gmailClient.addLabel(result.id, label.id);
+          console.log(`Applied label ${userEmail} to message ${result.id}`);
         }
+      } catch (labelError) {
+        console.error('Error applying label:', labelError);
+        // Don't fail the request if labeling fails, but log it
+      }
     }
 
     // 3. Save sent email to DB for thread tracking
@@ -108,25 +109,25 @@ export const sendEmail = async (c: Context) => {
     // Actually, if we save it with threadId, and then the reply comes with same threadId, we can find this email.
     // But this email needs to have caseId.
     // So we MUST pass caseId from frontend.
-    
+
     // Let's assume we will update frontend to pass caseId.
-    const { caseId } = body; 
-    
+    const { caseId } = body;
+
     if (result.id && result.threadId) {
-        const { Email } = require('../models/Email'); // Lazy load to avoid circular deps if any
-        const emailDoc = new Email({
-            messageId: result.id,
-            threadId: result.threadId,
-            from: 'policypilotco@gmail.com', // Agent email
-            to,
-            subject,
-            body: message,
-            labelIds: result.labelIds,
-            internalDate: new Date(),
-            caseId: caseId // Save caseId if provided
-        });
-        await emailDoc.save();
-        console.log(`Saved sent email ${result.id} to DB with caseId ${caseId}`);
+      const { Email } = require('../models/Email'); // Lazy load to avoid circular deps if any
+      const emailDoc = new Email({
+        messageId: result.id,
+        threadId: result.threadId,
+        from: 'policypilotco@gmail.com', // Agent email
+        to,
+        subject,
+        body: message,
+        labelIds: result.labelIds,
+        internalDate: new Date(),
+        caseId: caseId // Save caseId if provided
+      });
+      await emailDoc.save();
+      console.log(`Saved sent email ${result.id} to DB with caseId ${caseId}`);
     }
 
     return c.json({ success: true, result });
@@ -141,14 +142,14 @@ export const webhook = async (c: Context) => {
     const body = await c.req.json();
     // Google Cloud Pub/Sub pushes messages in a specific format
     // { "message": { "data": "base64-encoded-json", "messageId": "..." } }
-    
+
     if (!body.message || !body.message.data) {
       return c.json({ error: 'Invalid payload' }, 400);
     }
 
     const data = Buffer.from(body.message.data, 'base64').toString('utf-8');
     const notification = JSON.parse(data);
-    
+
     // Notification format: { "emailAddress": "...", "historyId": 12345 }
     console.log('Received Pub/Sub notification:', notification);
 
@@ -158,19 +159,19 @@ export const webhook = async (c: Context) => {
     // Or maybe the notification doesn't contain the message ID.
     // Gmail push notifications only tell you *something* changed.
     // We need to list history or messages to find what's new.
-    
+
     // Simplified approach for this task:
     // List messages from the last minute (or just latest) to find the new one.
     // Ideally we use history.list(startHistoryId=...).
-    
+
     // Let's just trigger a sync/check.
     // We'll list unread messages or just the very latest message.
-    
+
     const messages = await gmailClient.listMessages('label:INBOX is:unread');
     if (messages && messages.length > 0) {
-        // Process the latest one (or all unread)
-        // For demo purposes, let's just process the first one found
-        await orchestrator.processIncomingEmail(messages[0].id!);
+      // Process the latest one (or all unread)
+      // For demo purposes, let's just process the first one found
+      await orchestrator.processIncomingEmail(messages[0].id!);
     }
 
     return c.json({ success: true });
@@ -181,25 +182,25 @@ export const webhook = async (c: Context) => {
 };
 
 export const syncEmails = async (c: Context) => {
-    try {
-        console.log('Manual sync triggered');
-        // List unread messages in INBOX
-        const messages = await gmailClient.listMessages('label:INBOX is:unread');
-        
-        let processedCount = 0;
-        if (messages && messages.length > 0) {
-            // Process all unread messages
-            for (const message of messages) {
-                if (message.id) {
-                    await orchestrator.processIncomingEmail(message.id);
-                    processedCount++;
-                }
-            }
+  try {
+    console.log('Manual sync triggered');
+    // List unread messages in INBOX
+    const messages = await gmailClient.listMessages('label:INBOX is:unread');
+
+    let processedCount = 0;
+    if (messages && messages.length > 0) {
+      // Process all unread messages
+      for (const message of messages) {
+        if (message.id) {
+          await orchestrator.processIncomingEmail(message.id);
+          processedCount++;
         }
-        
-        return c.json({ success: true, processed: processedCount });
-    } catch (error) {
-        console.error('Error syncing emails:', error);
-        return c.json({ error: 'Sync failed' }, 500);
+      }
     }
+
+    return c.json({ success: true, processed: processedCount });
+  } catch (error) {
+    console.error('Error syncing emails:', error);
+    return c.json({ error: 'Sync failed' }, 500);
+  }
 };

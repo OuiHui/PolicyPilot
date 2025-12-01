@@ -22,13 +22,17 @@ export async function getOAuthClient(): Promise<OAuth2Client> {
   const client_secret = process.env.GMAIL_CLIENT_SECRET;
   const redirect_uri = process.env.GMAIL_REDIRECT_URI;
 
+  console.log('Debug: GMAIL_CLIENT_ID exists:', !!client_id);
+  console.log('Debug: GMAIL_CLIENT_SECRET exists:', !!client_secret);
+  console.log('Debug: GMAIL_REDIRECT_URI exists:', !!redirect_uri);
+
   if (!client_id || !client_secret || !redirect_uri) {
     throw new Error("Missing Gmail OAuth credentials in .env file");
   }
-  
+
   const oAuth2Client = new google.auth.OAuth2(
-    client_id, 
-    client_secret, 
+    client_id,
+    client_secret,
     redirect_uri
   );
 

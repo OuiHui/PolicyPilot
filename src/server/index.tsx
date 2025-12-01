@@ -1,4 +1,9 @@
-import 'dotenv/config'; // Load .env files
+import dotenv from 'dotenv';
+const localEnv = dotenv.config({ path: '.env.local' });
+const defaultEnv = dotenv.config({ path: '.env' });
+console.log('Debug: .env.local parsed:', localEnv.parsed);
+console.log('Debug: .env parsed:', defaultEnv.parsed);
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
