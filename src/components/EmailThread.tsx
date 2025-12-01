@@ -17,6 +17,12 @@ type HighlightedComment = {
     position: { top: number; left: number };
 };
 
+type AnalysisComment = {
+    phrase: string;
+    comment: string;
+    type: "positive" | "concern" | "suggestion" | "opportunity";
+};
+
 export function EmailThread({
     emailThread,
     userEmail,
@@ -25,7 +31,44 @@ export function EmailThread({
     const [hoveredComment, setHoveredComment] =
         useState<HighlightedComment | null>(null);
 
-    const getEmailAnalysis = (email: EmailMessage) => {
+    const getEmailAnalysis = (email: EmailMessage): AnalysisComment[] => {
+        if (email.analysis) {
+            const comments: AnalysisComment[] = [];
+            
+            // Map weaknesses to concerns
+            email.analysis.weaknesses?.forEach(weakness => {
+                // Heuristic: try to find a matching phrase in the body, or just attach to the beginning
+                // For now, we'll just return them as general comments if we can't find exact matches
+                // But the UI expects a phrase to highlight.
+                // Let's assume the analysis returns phrases or we just highlight the whole body?
+                // Or maybe we just show them as a list on the side?
+                // The current UI highlights text.
+                // If RAG returns specific quotes, we can use them.
+                // If not, we might need to change the UI or just highlight the first sentence.
+                
+                // Let's try to find the weakness text in the body if it's a quote
+                // If not, we can't easily highlight.
+                // For this demo, let's just map the "terms" which are likely single words/phrases.
+            });
+
+            // Map terms to suggestions/info
+            email.analysis.terms?.forEach(term => {
+                comments.push({
+                    phrase: term.term,
+                    comment: term.definition,
+                    type: "suggestion"
+                });
+            });
+
+            // If we have manual hardcoded ones for demo purposes (e.g. sent emails), keep them?
+            // The user wants "layman terms" and "weaknesses".
+            // Let's map "weaknesses" to "concern" type.
+            // Since we don't have exact location, we'll just map the terms for now.
+            
+            return comments;
+        }
+
+        // Fallback for sent emails or if no analysis
         if (email.type === "sent") {
             return [
                 {
@@ -40,34 +83,9 @@ export function EmailThread({
                         "Effective use of policy language to support your argument",
                     type: "positive" as const,
                 },
-                {
-                    phrase: "specific dates",
-                    comment:
-                        "Consider adding specific dates for stronger documentation",
-                    type: "suggestion" as const,
-                },
             ];
         } else {
-            return [
-                {
-                    phrase: "generic language",
-                    comment:
-                        "Response uses generic language without addressing specific policy sections",
-                    type: "concern" as const,
-                },
-                {
-                    phrase: "physician's documentation",
-                    comment:
-                        "They haven't addressed your physician's documentation - highlight this in follow-up",
-                    type: "opportunity" as const,
-                },
-                {
-                    phrase: "acknowledge receipt",
-                    comment:
-                        "They acknowledge receipt and timeline, which is procedurally important",
-                    type: "positive" as const,
-                },
-            ];
+            return [];
         }
     };
 

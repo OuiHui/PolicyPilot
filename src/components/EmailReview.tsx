@@ -24,12 +24,15 @@ type EmailReviewProps = {
   onSend: (message: EmailMessage) => void;
   onBack: () => void;
   onDelete?: () => void;
+  initialSubject?: string;
+  initialBody?: string;
+  caseId: string; // Add caseId prop
 };
 
-export function EmailReview({ userEmail, parsedData, onSend, onBack, onDelete }: EmailReviewProps) {
+export function EmailReview({ userEmail, parsedData, onSend, onBack, onDelete, initialSubject, initialBody, caseId }: EmailReviewProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [to, setTo] = useState('claims@' + parsedData.insurer.toLowerCase().replace(/\s+/g, '') + '.com');
-  const [subject, setSubject] = useState(`Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
+  const [subject, setSubject] = useState(initialSubject || `Appeal for Claim Denial - Policy #${parsedData.policyNumber}`);
 
   const progressSteps = [
     "Choose Plan",
@@ -37,7 +40,7 @@ export function EmailReview({ userEmail, parsedData, onSend, onBack, onDelete }:
     "Strategy",
     "Send",
   ];
-  const [body, setBody] = useState(
+  const [body, setBody] = useState(initialBody ||
     `Dear ${parsedData.insurer} Claims Department,
 
 I am writing to formally appeal the denial of my recent claim under Policy #${parsedData.policyNumber} for medical services rendered on [Date of Service].
@@ -61,18 +64,41 @@ Sincerely,
 [Your Name]`
   );
 
-  const handleSend = () => {
-    const message: EmailMessage = {
-      id: Date.now().toString(),
-      from: userEmail,
-      to,
-      subject,
-      body,
-      date: new Date().toISOString(),
-      type: 'sent'
-    };
-    onSend(message);
-    setShowConfirmation(false);
+  const handleSend = async () => {
+    try {
+      const response = await fetch('/api/gmail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to,
+          subject,
+          message: body,
+          userEmail, // Pass userEmail for labeling
+          caseId, // Pass caseId for tracking
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send email');
+      }
+
+      const message: EmailMessage = {
+        id: Date.now().toString(),
+        from: userEmail,
+        to,
+        subject,
+        body,
+        date: new Date().toISOString(),
+        type: 'sent'
+      };
+      onSend(message);
+      setShowConfirmation(false);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Failed to send email. Please try again.');
+    }
   };
 
   return (

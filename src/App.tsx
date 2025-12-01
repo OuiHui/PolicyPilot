@@ -96,6 +96,13 @@ export type EmailMessage = {
   body: string;
   date: string;
   type: "sent" | "received";
+  analysis?: {
+    summary: string;
+    weaknesses: string[];
+    terms: { term: string; definition: string }[];
+    actionItems: string[];
+  };
+  threadId?: string;
 };
 
 export default function App() {
@@ -670,14 +677,44 @@ export default function App() {
     setCurrentScreen("strategy");
   };
 
+  const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null);
+
   const handleDraftEmail = (draft: { subject: string; body: string }) => {
     if (!currentCaseId) return;
+    setEmailDraft(draft);
     setCases(cases.map(c =>
       c.id === currentCaseId
         ? { ...c, currentStep: 'email-review' }
         : c
     ));
     setCurrentScreen('email-review');
+  };
+
+  const handleDraftFollowup = async () => {
+    if (!currentCaseId) return;
+    
+    // Show loading state if needed, or just rely on async
+    // Ideally we should have a loading state for this action
+    
+    try {
+        const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/generate-followup`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.emailDraft) {
+                handleDraftEmail(result.emailDraft);
+            }
+        } else {
+            console.error("Failed to generate follow-up");
+            alert("Failed to generate follow-up email. Please try again.");
+        }
+    } catch (e) {
+        console.error("Error generating follow-up:", e);
+        alert("Error generating follow-up email.");
+    }
   };
 
   const handleSendEmail = async (message: EmailMessage) => {
@@ -694,23 +731,30 @@ export default function App() {
     setCurrentScreen('email-sent');
   };
 
-  const handleViewReply = () => {
+  const handleSyncComplete = async () => {
     if (!currentCaseId) return;
-    const reply: EmailMessage = {
-      id: Date.now().toString(),
-      from: "claims@healthguard.com",
-      to: userEmail,
-      subject: "Re: Appeal for Claim Denial",
-      body: "Insurance company response...",
-      date: new Date().toISOString(),
-      type: "received",
-    };
-    setCases(cases.map(c =>
-      c.id === currentCaseId
-        ? { ...c, emailThread: [...c.emailThread, reply], status: 'reply-received', currentStep: 'reply-received', hasNewEmail: true }
-        : c
-    ));
-    setCurrentScreen('reply-received');
+    
+    // Fetch latest case data to get the new email and analysis
+    try {
+        const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
+        if (response.ok) {
+            const updatedCase = await response.json();
+            setCases(cases.map(c => c.id === currentCaseId ? updatedCase : c));
+            
+            // Only navigate if there is actually a reply
+            const hasReply = updatedCase.emailThread && updatedCase.emailThread.some((e: any) => e.type === 'received');
+            if (hasReply) {
+                setCurrentScreen('reply-received');
+            } else {
+                console.log("Synced, but no reply found yet.");
+                alert("No new reply found yet. Please check back later.");
+            }
+        } else {
+            console.error("Failed to fetch updated case");
+        }
+    } catch (e) {
+        console.error("Error fetching case:", e);
+    }
   };
 
   const handleViewCase = (caseId: string) => {
@@ -778,6 +822,17 @@ export default function App() {
     ));
   };
 
+  const handleDraftFollowupGenerated = (draft: { subject: string; body: string }) => {
+    if (!currentCaseId) return;
+    setEmailDraft(draft);
+    setCases(cases.map(c =>
+      c.id === currentCaseId
+        ? { ...c, currentStep: 'followup-review' }
+        : c
+    ));
+    setCurrentScreen('followup-review');
+  };
+
   const handleLogout = () => {
     setIsLoggedIn(false);
     setHasAcceptedHIPAA(false);
@@ -809,6 +864,7 @@ export default function App() {
           onViewCase={handleViewCase}
           onResumeCase={handleResumeCase}
           onDeleteCase={handleDeleteCase}
+          onResolveCase={handleResolveCase}
         />;
       case 'my-cases':
         return <MyCases
@@ -898,6 +954,7 @@ export default function App() {
           onViewEmailThread={handleViewEmailThread}
           insurancePlans={insurancePlans}
           onEditCase={handleEditCase}
+          onDraftFollowup={handleDraftFollowup}
         />;
 
       case 'email-thread':
@@ -951,8 +1008,47 @@ export default function App() {
         />;
       case 'email-review':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-        return <EmailReview userEmail={userEmail} parsedData={currentCase.parsedData} onSend={handleSendEmail} onBack={() => setCurrentScreen('strategy')} onDelete={() => handleDeleteCase(currentCase.id)} />;
-        return <Login onLogin={handleLogin} />;
+        return <EmailReview 
+            userEmail={userEmail} 
+            parsedData={currentCase.parsedData} 
+            onSend={handleSendEmail} 
+            onBack={() => setCurrentScreen('strategy')} 
+            onDelete={() => handleDeleteCase(currentCase.id)}
+            initialSubject={emailDraft?.subject}
+            initialBody={emailDraft?.body}
+            caseId={currentCase.id}
+        />;
+      case 'email-sent':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        return <EmailSent 
+            case={currentCase} 
+            onViewReply={handleSyncComplete} 
+            onBackToDashboard={() => setCurrentScreen('dashboard')} 
+        />;
+      case 'reply-received':
+         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+
+
+  // ... inside renderScreen ...
+
+      case 'reply-received':
+         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+         return <ReplyReceived
+            case={currentCase}
+            onBack={() => setCurrentScreen('dashboard')}
+            onDraftGenerated={handleDraftFollowupGenerated}
+         />;
+      case 'followup-review':
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        return <FollowupReview 
+            userEmail={userEmail} 
+            onSend={handleSendEmail} 
+            onBack={() => setCurrentScreen('reply-received')}
+            initialSubject={emailDraft?.subject}
+            initialBody={emailDraft?.body}
+            caseId={currentCase.id}
+            emailThread={currentCase.emailThread}
+        />;
     }
   };
 

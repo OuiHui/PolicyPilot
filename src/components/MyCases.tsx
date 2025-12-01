@@ -327,10 +327,10 @@ export function MyCases({
                       View Details
                     </Button>
                     {!caseItem.resolved && (
-                      <div className="flex gap-2">
+                      <>
                         <Button
                           onClick={() => handleResolveClick(caseItem.id)}
-                          className="flex-1"
+                          className="w-full"
                           variant="default"
                           size="sm"
                         >
@@ -339,14 +339,14 @@ export function MyCases({
                         </Button>
                         <Button
                           onClick={() => handleDeleteClick(caseItem.id)}
-                          className="flex-1"
+                          className="w-full"
                           variant="destructive"
                           size="sm"
                         >
                           <Trash2 className="w-4 h-4 mr-1" />
                           Delete
                         </Button>
-                      </div>
+                      </>
                     )}
                     {caseItem.resolved && (
                       <Button

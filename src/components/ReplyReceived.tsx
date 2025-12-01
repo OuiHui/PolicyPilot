@@ -1,83 +1,46 @@
-import { Mail, Lightbulb, ArrowRight, ArrowLeft } from "lucide-react";
+import { Mail, Lightbulb, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ProgressBar } from "./ProgressBar";
 import type { Case } from "../App";
 import { useState } from "react";
+import { apiUrl } from "../config";
 
 type ReplyReceivedProps = {
   case: Case;
-  onDraftFollowup: () => void;
+  onDraftGenerated: (draft: { subject: string; body: string }) => void;
   onBack: () => void;
+  onDraftFollowup?: () => void; // Keep for backward compatibility if needed, but we'll use onDraftGenerated
 };
 
 export function ReplyReceived({
   case: caseItem,
-  onDraftFollowup,
+  onDraftGenerated,
   onBack,
 }: ReplyReceivedProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const latestReply = caseItem.emailThread
     .filter((e) => e.type === "received")
-    .pop();
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
   const insurerReply = {
     from: latestReply?.from || "claims@healthguard.com",
     subject: latestReply?.subject || "Re: Appeal for Claim Denial",
     date: latestReply?.date
       ? new Date(latestReply.date).toLocaleString()
-      : "October 27, 2025 at 2:34 PM",
-    body: `Dear Policyholder,
-
-Thank you for your appeal regarding claim #${caseItem.parsedData?.policyNumber}.
-
-We have reviewed your submitted documentation and appeal letter. However, after careful consideration by our medical review team, we must uphold our original denial determination.
-
-Our medical director has determined that the requested service does not meet the criteria for medical necessity as outlined in our clinical guidelines. While we understand your physician recommended this treatment, our internal medical review process applies evidence-based medical criteria that must be met for coverage approval.
-
-You have the right to request an external review by an independent medical reviewer if you disagree with this determination. Information about the external review process is attached.
-
-Please contact our member services department if you have any questions.
-
-Sincerely,
-${caseItem.insuranceCompany} Claims Department`,
+      : new Date().toLocaleString(),
+    body: latestReply?.body || "No content available.",
   };
 
-  const analysis = [
-    {
-      color: "bg-red-100",
-      label: "Misleading",
-      items: [
-        {
-          text: "clinical guidelines",
-          explanation:
-            "They're referencing internal guidelines, not your policy terms. This is a common tactic to avoid honoring the actual policy language.",
-        },
-      ],
-    },
-    {
-      color: "bg-blue-100",
-      label: "Technical Jargon",
-      items: [
-        {
-          text: "evidence-based medical criteria",
-          explanation:
-            "They're applying stricter criteria than what's written in your policy. Your policy doesn't require evidence-based standards.",
-        },
-      ],
-    },
-    {
-      color: "bg-green-100",
-      label: "Opportunity",
-      items: [
-        {
-          text: "external review",
-          explanation:
-            "This is good! They're informing you of escalation options. You may want to pursue this if the second appeal fails.",
-        },
-      ],
-    },
-  ];
+  // Map analysis data to UI format
+  const analysisData = latestReply?.analysis || {
+    terms: [],
+    weaknesses: [],
+    summary: "No analysis available.",
+    actionItems: []
+  };
 
   const [hovered, setHovered] = useState<{
     text: string;
@@ -87,11 +50,12 @@ ${caseItem.insuranceCompany} Claims Department`,
   } | null>(null);
 
   const highlightText = (text: string) => {
-    const highlights = [
-      { phrase: "clinical guidelines", color: "bg-yellow-200" },
-      { phrase: "evidence-based medical criteria", color: "bg-yellow-200" },
-      { phrase: "external review", color: "bg-yellow-200" },
-    ];
+    // We only highlight terms for now, as weaknesses might be abstract concepts not in text
+    const highlights = (analysisData.terms || []).map(t => ({
+        phrase: t.term,
+        color: "bg-yellow-200",
+        explanation: t.definition
+    }));
 
     let parts: { text: string; color?: string; explanation?: string }[] = [];
     let lastIndex = 0;
@@ -104,29 +68,38 @@ ${caseItem.insuranceCompany} Claims Department`,
       phrase: string;
       explanation: string;
     }[] = [];
-    highlights.forEach(({ phrase, color }) => {
-      const regex = new RegExp(phrase, "gi");
+    
+    highlights.forEach(({ phrase, color, explanation }) => {
+      // Escape special characters in phrase for regex
+      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedPhrase, "gi");
       let match: RegExpExecArray | null;
       while ((match = regex.exec(text)) !== null) {
-        // find explanation for this phrase from analysis
-        const found = analysis
-          .flatMap((a) => a.items)
-          .find((i) => i.text.toLowerCase() === match![0].toLowerCase());
         matches.push({
           start: match.index,
           end: match.index + match[0].length,
           color,
           phrase: match[0],
-          explanation: found ? found.explanation : "",
+          explanation: explanation,
         });
       }
     });
 
     // Sort by position
     matches.sort((a, b) => a.start - b.start);
+    
+    // Remove overlaps (simple greedy approach: keep first, skip overlapping)
+    const uniqueMatches: typeof matches = [];
+    let currentEnd = 0;
+    matches.forEach(m => {
+        if (m.start >= currentEnd) {
+            uniqueMatches.push(m);
+            currentEnd = m.end;
+        }
+    });
 
     // Build parts
-    matches.forEach(({ start, end, color, explanation }) => {
+    uniqueMatches.forEach(({ start, end, color, explanation }) => {
       if (start > lastIndex) {
         parts.push({ text: text.substring(lastIndex, start) });
       }
@@ -139,6 +112,31 @@ ${caseItem.insuranceCompany} Claims Department`,
     }
 
     return parts;
+  };
+
+  const handleGenerateFollowup = async () => {
+    setIsGenerating(true);
+    try {
+        const response = await fetch(apiUrl(`/api/cases/${caseItem.id}/generate-followup`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.emailDraft) {
+                onDraftGenerated(result.emailDraft);
+            }
+        } else {
+            console.error("Failed to generate follow-up");
+            alert("Failed to generate follow-up email. Please try again.");
+        }
+    } catch (e) {
+        console.error("Error generating follow-up:", e);
+        alert("Error generating follow-up email.");
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   return (
@@ -234,27 +232,51 @@ ${caseItem.insuranceCompany} Claims Department`,
 
         {/* Recommended Response */}
         <Card className="p-6 bg-orange-50 border-orange-200 mb-6">
-          <h3 className="text-gray-900 mb-3">Recommended Response</h3>
+          <h3 className="text-gray-900 mb-3">AI Analysis Summary</h3>
           <p className="text-gray-700 mb-4">
-            This is a <strong>standard denial response</strong> that doesn't
-            address the specific policy conflicts you raised. They're
-            referencing their internal guidelines instead of your policy terms.
+            {analysisData.summary}
           </p>
-          <p className="text-gray-700">
-            <strong>Your next step:</strong> Draft a follow-up that points out
-            they haven't addressed the policy sections you cited and requests
-            clarification on how their clinical guidelines override your policy.
-          </p>
+          
+          {analysisData.weaknesses && analysisData.weaknesses.length > 0 && (
+            <div className="mb-4">
+                <h4 className="font-semibold text-orange-800 mb-2">Identified Weaknesses:</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                    {analysisData.weaknesses.map((w: string, i: number) => (
+                        <li key={i} className="text-gray-700">{w}</li>
+                    ))}
+                </ul>
+            </div>
+          )}
+
+          {analysisData.actionItems && analysisData.actionItems.length > 0 && (
+             <div>
+                <h4 className="font-semibold text-orange-800 mb-2">Recommended Actions:</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                    {analysisData.actionItems.map((item: string, i: number) => (
+                        <li key={i} className="text-gray-700">{item}</li>
+                    ))}
+                </ul>
+             </div>
+          )}
         </Card>
 
         <div className="flex justify-between mb-6">
-          <Button variant="outline" onClick={onBack} size="lg">
+          <Button variant="outline" onClick={onBack} size="lg" disabled={isGenerating}>
             <ArrowLeft className="mr-2 w-5 h-5" />
             Back
           </Button>
-          <Button onClick={onDraftFollowup} size="lg" className="px-8">
-            Draft Follow-up Response
-            <ArrowRight className="ml-2 w-5 h-5" />
+          <Button onClick={handleGenerateFollowup} size="lg" className="px-8" disabled={isGenerating}>
+            {isGenerating ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Drafting Response...
+                </>
+            ) : (
+                <>
+                    Draft Follow-up Response
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+            )}
           </Button>
         </div>
       </div>

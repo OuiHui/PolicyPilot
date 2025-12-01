@@ -7,6 +7,7 @@ import {
   ArrowRight,
   FileText,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -21,6 +22,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
 import type { Case } from "../App";
 
 type DashboardProps = {
@@ -30,6 +41,7 @@ type DashboardProps = {
   onViewCase: (caseId: string) => void;
   onResumeCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
+  onResolveCase: (caseId: string, feedback?: string) => void;
 };
 
 export function Dashboard({
@@ -39,9 +51,12 @@ export function Dashboard({
   onViewCase,
   onResumeCase,
   onDeleteCase,
+  onResolveCase,
 }: DashboardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState("");
   const steps = [
     {
       number: 1,
@@ -137,6 +152,20 @@ export function Dashboard({
       onDeleteCase(selectedCaseId);
       setDeleteDialogOpen(false);
       setSelectedCaseId(null);
+    }
+  };
+
+  const handleResolveClick = (caseId: string) => {
+    setSelectedCaseId(caseId);
+    setResolveDialogOpen(true);
+  };
+
+  const handleConfirmResolve = () => {
+    if (selectedCaseId) {
+      onResolveCase(selectedCaseId, feedback);
+      setResolveDialogOpen(false);
+      setSelectedCaseId(null);
+      setFeedback("");
     }
   };
 
@@ -255,6 +284,28 @@ export function Dashboard({
                         View Details
                       </Button>
                       {!caseItem.resolved && (
+                        <>
+                          <Button
+                            onClick={() => handleResolveClick(caseItem.id)}
+                            className="w-full"
+                            variant="default"
+                            size="sm"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                            Resolve
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteClick(caseItem.id)}
+                            className="w-full"
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                      {caseItem.resolved && (
                         <Button
                           onClick={() => handleDeleteClick(caseItem.id)}
                           className="w-full"
@@ -321,6 +372,41 @@ export function Dashboard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Resolve Case Dialog with Feedback */}
+      <Dialog open={resolveDialogOpen} onOpenChange={setResolveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Case</DialogTitle>
+            <DialogDescription>
+              Mark this case as resolved and optionally provide feedback about
+              your experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="feedback">Feedback (Optional)</Label>
+              <Textarea
+                id="feedback"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="How did your appeal go? Any insights to share?"
+                className="mt-2"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResolveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmResolve}>Mark as Resolved</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,6 +9,13 @@ const emailMessageSchema = new mongoose.Schema({
   body: String,
   date: String,
   type: { type: String, enum: ["sent", "received"] },
+  threadId: String, // Add threadId to schema
+  analysis: {
+    summary: String,
+    weaknesses: [String],
+    terms: [{ term: String, definition: String }],
+    actionItems: [String]
+  }
 });
 
 const parsedDataSchema = new mongoose.Schema({

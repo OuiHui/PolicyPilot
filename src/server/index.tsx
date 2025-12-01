@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { serve } from "@hono/node-server";
 import { connectDB } from "./db";
 import api from "./routes/index";
+import gmailRoutes from "./routes/gmailRoutes";
 
 // Connect to Database
 connectDB();
@@ -33,6 +34,7 @@ app.get("/health", (c) => {
 
 // Mount API routes
 app.route("/api", api);
+app.route("/api/gmail", gmailRoutes);
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 8000;
 console.log(`Server is running on port ${port}`);
