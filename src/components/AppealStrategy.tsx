@@ -216,32 +216,6 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
             </div>
           </Card>
 
-          {/* Key Terms */}
-          {analysisResult.terms.length > 0 && (
-            <Card className="p-6 relative">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-gray-900 mb-2">Key Terms Explained</h2>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Hover over highlighted terms in the analysis above or review below</span>
-                  </div>
-                </div>
-              </div>
-              <div className="pl-13 space-y-4">
-                {analysisResult.terms.map((term, idx) => (
-                  <div key={idx} className="bg-gray-50 p-3 rounded-lg">
-                    <span className="font-semibold text-gray-900">{term.term}:</span>
-                    <span className="text-gray-700 ml-2">{term.definition}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
           {/* Hover Tooltip */}
           {hoveredTerm && (
             <div
@@ -265,7 +239,7 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
               <div className="flex-1">
                 <h2 className="text-gray-900 mb-2">Our Recommendation</h2>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg mb-4">
-                  <span>Proceed with Appeal</span>
+                  <span>Case Correction</span>
                 </div>
                 <p className="text-gray-700 mb-4">
                   Based on the AI analysis, we have drafted a professional appeal letter for you.
