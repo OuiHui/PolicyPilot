@@ -7,7 +7,7 @@ const productionUrl = import.meta.env.VITE_VERCEL_URL
     : window.location.origin;
 
 export const API_BASE_URL = isDevelopment
-    ? 'http://localhost:3000'
+    ? ''
     : productionUrl;
 
 // Helper function for making API calls

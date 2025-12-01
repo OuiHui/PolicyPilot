@@ -9,3 +9,10 @@ dist
 chroma_db_*
 token.json
 docs/
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.Python

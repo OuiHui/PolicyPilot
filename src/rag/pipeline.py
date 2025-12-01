@@ -726,7 +726,7 @@ def main():
             # I'll keep it loose for now to ensure we get *some* output for the demo, 
             # but logically we should filter. Let's try to respect the user's wish but fallback if empty.
             if not relevant_context:
-                 print(json.dumps({"error": "No relevant policy sections found with high confidence."}))
+                 print(json.dumps({"error": "No relevant policy sections found with high confidence."}), file=sys.stderr)
                  # return # Don't return early for now to ensure we generate something for the user to see
 
             context_text = "\n\n".join(relevant_context)
