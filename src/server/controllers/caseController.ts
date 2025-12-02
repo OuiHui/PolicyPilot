@@ -444,6 +444,10 @@ export const generateEmail = async (c: Context) => {
             let insurerName = plan?.insuranceCompany || "Insurance Company";
             let userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : "PolicyPilot User";
 
+            // Data from Python extraction
+            let denialDate = result.emailDraft?.denial_date || "[Date of Denial Letter]";
+            let procedureName = result.emailDraft?.procedure_name || "[Name of Procedure/Treatment]";
+
             if (plan && caseData?.coveredPersonId) {
               const person = plan.coveredIndividuals.find((p: any) => p.id === caseData.coveredPersonId);
               if (person) {
@@ -455,15 +459,15 @@ export const generateEmail = async (c: Context) => {
             // Construct the template
             const generatedBody = result.emailDraft?.body || "";
 
-            const finalBody = `
-Patient Name: ${patientName}
+            const finalBody = `Patient Name: ${patientName}
 Date of Birth: ${dob}
 
 To the ${insurerName} Appeals Department:
 
 Please be advised that this firm represents the above-referenced
 insured person (“the Plan Member”). This correspondence constitutes a
-formal, first-level appeal of the adverse benefit determination.
+formal, first-level appeal of the adverse benefit determination issued
+on ${denialDate}, which denied preauthorization for ${procedureName}.
 
 ${generatedBody}
 

@@ -612,6 +612,11 @@ def main():
             5. **CRITICAL**: Use the "PREVIOUS DENIAL ANALYSIS" section to identify weaknesses in the insurer's denial and build your counter-argument. The analysis provides a layman's explanation of why the denial might be invalid—translate this into professional legal arguments.
             6. Demand a specific remedy (e.g., "immediate reversal of the denial", "authorization of the service").
             
+            **EXTRACTION**:
+            Also extract the following details from the context if available:
+            - **Denial Date**: The date of the adverse benefit determination letter.
+            - **Procedure Name**: The specific name of the procedure or treatment that was denied.
+            
             Context:
             ---
             {context_text}
@@ -621,8 +626,11 @@ def main():
             
             {email_context}
             
-            Return the output as a JSON object with 'subject' and 'body' keys. 
-            For 'subject', suggest a concise subject line like "APPEAL: [Patient Name] - [Policy Number]".
+            Return the output as a JSON object with keys:
+            - 'subject': Suggest a concise subject line like "APPEAL: [Patient Name] - [Policy Number]"
+            - 'body': The body paragraphs of the email.
+            - 'denial_date': The extracted date (e.g., "January 1, 2024") or "[Date of Denial Letter]" if not found.
+            - 'procedure_name': The extracted procedure name or "[Name of Procedure/Treatment]" if not found.
             """
             
             print("Calling Gemini for email draft...", file=sys.stderr)
@@ -630,10 +638,26 @@ def main():
 
             # Parse Email Response
             try:
-                email_json = json.loads(email_response.text.strip().replace('```json', '').replace('```', ''))
+                # robust JSON extraction
+                text = email_response.text.strip()
+                start_idx = text.find('{')
+                end_idx = text.rfind('}')
+                
+                if start_idx != -1 and end_idx != -1:
+                    json_str = text[start_idx:end_idx+1]
+                    email_json = json.loads(json_str)
+                else:
+                     raise ValueError("No JSON object found in response")
+
             except Exception as e:
                 print(f"Failed to parse email JSON: {e}", file=sys.stderr)
-                email_json = {"subject": "Appeal for Denial", "body": email_response.text}
+                # Fallback
+                email_json = {
+                    "subject": "Appeal for Denial", 
+                    "body": email_response.text.replace('```json', '').replace('```', '').strip(),
+                    "denial_date": "[Date of Denial Letter]",
+                    "procedure_name": "[Name of Procedure/Treatment]"
+                }
 
             # Construct Final Output
             output = {
@@ -737,11 +761,14 @@ def main():
             
             **INSTRUCTIONS**:
             1. **Analyze**: Explain in simple layman's terms why the coverage was denied based on the provided text. Focus on specific policy sections. Point out unsupported statements or weaknesses.
+               - **TONE**: Address the user directly as "you" (2nd Person POV). Do not use "the member" or the patient's name.
                - Start directly with the analysis. No filler ("Of course", "As an expert").
                - No markdown formatting (no #, **, *). Use standard paragraphs.
                - No disclaimer.
             
-            2. **Identify Terms**: Identify confusing legal or medical terms *that appear in your analysis above* and explain them in simple layman's terms.
+            2. **Identify Terms**: Identify **complex legal jargon** or specific insurance definitions *that appear in your analysis above* and explain them in simple layman's terms.
+               - **FOCUS**: Prioritize legal/insurance terms (e.g., "adverse benefit determination", "clinical contraindication", "prior authorization").
+               - **EXCLUDE**: Common medical terms (e.g., "imaging", "fracture", "x-ray") unless they are critical to the specific legal reason for denial.
                - CRITICAL: The 'term' MUST be an EXACT substring found in your generated analysis text.
             
             Return a SINGLE JSON object with the following structure:
@@ -757,16 +784,30 @@ def main():
             response = model.generate_content(combined_prompt)
             
             try:
-                # robust JSON extraction
+                # robust JSON extraction with brace counting
                 text = response.text.strip()
                 start_idx = text.find('{')
-                end_idx = text.rfind('}')
                 
-                if start_idx != -1 and end_idx != -1:
-                    json_str = text[start_idx:end_idx+1]
-                    parsed_output = json.loads(json_str)
-                    analysis_text = parsed_output.get("analysis", "")
-                    terms_json = parsed_output.get("terms", [])
+                if start_idx != -1:
+                    # Count braces to find the matching closing brace
+                    count = 0
+                    end_idx = -1
+                    for i, char in enumerate(text[start_idx:], start=start_idx):
+                        if char == '{':
+                            count += 1
+                        elif char == '}':
+                            count -= 1
+                            if count == 0:
+                                end_idx = i
+                                break
+                    
+                    if end_idx != -1:
+                        json_str = text[start_idx:end_idx+1]
+                        parsed_output = json.loads(json_str)
+                        analysis_text = parsed_output.get("analysis", "")
+                        terms_json = parsed_output.get("terms", [])
+                    else:
+                        raise ValueError("No matching closing brace found")
                 else:
                     raise ValueError("No JSON object found in response")
                     
