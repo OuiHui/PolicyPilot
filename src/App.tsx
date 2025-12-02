@@ -742,28 +742,28 @@ export default function App() {
 
   const handleDraftFollowup = async () => {
     if (!currentCaseId) return;
-    
+
     // Show loading state if needed, or just rely on async
     // Ideally we should have a loading state for this action
-    
+
     try {
-        const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/generate-followup`), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            if (result.emailDraft) {
-                handleDraftFollowupGenerated(result.emailDraft);
-            }
-        } else {
-            console.error("Failed to generate follow-up");
-            alert("Failed to generate follow-up email. Please try again.");
+      const response = await fetch(apiUrl(`/api/cases/${currentCaseId}/generate-followup`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.emailDraft) {
+          handleDraftFollowupGenerated(result.emailDraft);
         }
+      } else {
+        console.error("Failed to generate follow-up");
+        alert("Failed to generate follow-up email. Please try again.");
+      }
     } catch (e) {
-        console.error("Error generating follow-up:", e);
-        alert("Error generating follow-up email.");
+      console.error("Error generating follow-up:", e);
+      alert("Error generating follow-up email.");
     }
   };
 
@@ -783,27 +783,27 @@ export default function App() {
 
   const handleSyncComplete = async () => {
     if (!currentCaseId) return;
-    
+
     // Fetch latest case data to get the new email and analysis
     try {
-        const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
-        if (response.ok) {
-            const updatedCase = await response.json();
-            setCases(cases.map(c => c.id === currentCaseId ? updatedCase : c));
-            
-            // Only navigate if there is actually a reply
-            const hasReply = updatedCase.emailThread && updatedCase.emailThread.some((e: any) => e.type === 'received');
-            if (hasReply) {
-                setCurrentScreen('reply-received');
-            } else {
-                console.log("Synced, but no reply found yet.");
-                alert("No new reply found yet. Please check back later.");
-            }
+      const response = await fetch(apiUrl(`/api/cases/${currentCaseId}`));
+      if (response.ok) {
+        const updatedCase = await response.json();
+        setCases(cases.map(c => c.id === currentCaseId ? updatedCase : c));
+
+        // Only navigate if there is actually a reply
+        const hasReply = updatedCase.emailThread && updatedCase.emailThread.some((e: any) => e.type === 'received');
+        if (hasReply) {
+          setCurrentScreen('reply-received');
         } else {
-            console.error("Failed to fetch updated case");
+          console.log("Synced, but no reply found yet.");
+          alert("No new reply found yet. Please check back later.");
         }
+      } else {
+        console.error("Failed to fetch updated case");
+      }
     } catch (e) {
-        console.error("Error fetching case:", e);
+      console.error("Error fetching case:", e);
     }
   };
 
@@ -864,12 +864,22 @@ export default function App() {
     }
   };
 
-  const handleResolveCase = (caseId: string, feedback?: string) => {
+  const handleResolveCase = async (caseId: string, feedback?: string) => {
+    const updates = {
+      resolved: true,
+      resolvedDate: new Date().toISOString(),
+      feedback
+    };
+
+    // Optimistic update
     setCases(cases.map(c =>
       c.id === caseId
-        ? { ...c, resolved: true, resolvedDate: new Date().toISOString(), feedback }
+        ? { ...c, ...updates }
         : c
     ));
+
+    // Persist to DB
+    await updateCaseInDb(caseId, updates);
   };
 
   const handleDraftFollowupGenerated = (draft: { subject: string; body: string }) => {
@@ -882,7 +892,7 @@ export default function App() {
     ));
     setCurrentScreen('followup-review');
   };
-    
+
   const handleUserUpdate = (updatedUser: any) => {
     setUser(updatedUser);
     setUserEmail(updatedUser.email);
@@ -1067,46 +1077,46 @@ export default function App() {
         />;
       case 'email-review':
         if (!currentCase?.parsedData) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-        return <EmailReview 
-            userEmail={userEmail} 
-            parsedData={currentCase.parsedData} 
-            onSend={handleSendEmail} 
-            onBack={() => setCurrentScreen('strategy')} 
-            onDelete={() => handleDeleteCase(currentCase.id)}
-            initialSubject={emailDraft?.subject}
-            initialBody={emailDraft?.body}
-            caseId={currentCase.id}
+        return <EmailReview
+          userEmail={userEmail}
+          parsedData={currentCase.parsedData}
+          onSend={handleSendEmail}
+          onBack={() => setCurrentScreen('strategy')}
+          onDelete={() => handleDeleteCase(currentCase.id)}
+          initialSubject={emailDraft?.subject}
+          initialBody={emailDraft?.body}
+          caseId={currentCase.id}
         />;
       case 'email-sent':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-        return <EmailSent 
-            case={currentCase} 
-            onViewReply={handleSyncComplete} 
-            onBackToDashboard={() => setCurrentScreen('dashboard')} 
+        return <EmailSent
+          case={currentCase}
+          onViewReply={handleSyncComplete}
+          onBackToDashboard={() => setCurrentScreen('dashboard')}
         />;
       case 'reply-received':
-         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
 
 
-  // ... inside renderScreen ...
+      // ... inside renderScreen ...
 
       case 'reply-received':
-         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-         return <ReplyReceived
-            case={currentCase}
-            onBack={() => setCurrentScreen('dashboard')}
-            onDraftGenerated={handleDraftFollowupGenerated}
-         />;
+        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
+        return <ReplyReceived
+          case={currentCase}
+          onBack={() => setCurrentScreen('dashboard')}
+          onDraftGenerated={handleDraftFollowupGenerated}
+        />;
       case 'followup-review':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-        return <FollowupReview 
-            userEmail={userEmail} 
-            onSend={handleSendEmail} 
-            onBack={() => setCurrentScreen('reply-received')}
-            initialSubject={emailDraft?.subject}
-            initialBody={emailDraft?.body}
-            caseId={currentCase.id}
-            emailThread={currentCase.emailThread}
+        return <FollowupReview
+          userEmail={userEmail}
+          onSend={handleSendEmail}
+          onBack={() => setCurrentScreen('reply-received')}
+          initialSubject={emailDraft?.subject}
+          initialBody={emailDraft?.body}
+          caseId={currentCase.id}
+          emailThread={currentCase.emailThread}
         />;
     }
   };
