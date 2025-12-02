@@ -29,11 +29,11 @@ export const getCaseById = async (c: Context) => {
   try {
     const id = c.req.param("id");
     const caseItem = await CaseModel.findOne({ id });
-    
+
     if (!caseItem) {
       return c.json({ error: "Case not found" }, 404);
     }
-    
+
     return c.json(caseItem);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -120,9 +120,9 @@ export const uploadDenialFiles = async (c: Context) => {
     // The user will see "Analyzing" status which is fine.
     // Actually, we should probably update status to 'analyzing' (already done above)
     // and then the analysis step will be fast.
-    
+
     // Determine Python executable path (reused logic)
-    let pythonPath = "python"; 
+    let pythonPath = "python";
     if (process.platform === "win32") {
       const venvPath = path.join(process.cwd(), "venv", "Scripts", "python.exe");
       if (fs.existsSync(venvPath)) pythonPath = venvPath;
@@ -142,15 +142,15 @@ export const uploadDenialFiles = async (c: Context) => {
 
     console.log(`🚀 Triggering background ingestion for case ${id}...`);
     const ingestProcess = spawn(pythonPath, [
-        scriptPath,
-        "--mode", "ingest",
-        "--caseId", id,
-        "--userId", updatedCase.userId // We need userId. It's in updatedCase.
+      scriptPath,
+      "--mode", "ingest",
+      "--caseId", id,
+      "--userId", updatedCase.userId // We need userId. It's in updatedCase.
     ], {
-        env: pythonEnv,
-        cwd: process.cwd(),
-        detached: true, // Let it run even if parent exits (though here parent is server)
-        stdio: 'ignore' // Ignore output for background process
+      env: pythonEnv,
+      cwd: process.cwd(),
+      detached: true, // Let it run even if parent exits (though here parent is server)
+      stdio: 'ignore' // Ignore output for background process
     });
     ingestProcess.unref(); // Don't wait for it
 
@@ -417,7 +417,7 @@ export const generateEmail = async (c: Context) => {
         console.error(`[Python Stderr]: ${data}`);
       });
 
-      pythonProcess.on("close", (code) => {
+      pythonProcess.on("close", async (code) => {
         if (code !== 0) {
           console.error(`Python script exited with code ${code}`);
           resolve(c.json({ error: "Email generation failed", details: errorString }, 500));
@@ -429,19 +429,69 @@ export const generateEmail = async (c: Context) => {
           if (result.error) {
             resolve(c.json({ error: result.error }, 400));
           } else {
-            // Save result to DB
-            if (result.emailDraft) {
-              CaseModel.findOneAndUpdate(
-                { id },
-                { emailDraft: result.emailDraft },
-                { new: true }
-              ).then(() => console.log(`💾 Saved email draft to DB for case ${id}`))
-                .catch(err => console.error(`❌ Failed to save email draft to DB: ${err}`));
+            // --- TEMPLATING LOGIC START ---
+            // Fetch additional data for the template
+            const caseData = await CaseModel.findOne({ id });
+            const { InsurancePlanModel } = require("../models/InsurancePlan");
+            const { UserModel } = require("../models/User");
+
+            const plan = await InsurancePlanModel.findOne({ id: caseData?.planId });
+            const user = await UserModel.findById(userId);
+
+            let patientName = "[PATIENT NAME]";
+            let dob = "[DOB]";
+            let policyNumber = caseData?.parsedData?.policyNumber || plan?.policyNumber || "[Policy Number]";
+            let insurerName = plan?.insuranceCompany || "Insurance Company";
+            let userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : "PolicyPilot User";
+
+            if (plan && caseData?.coveredPersonId) {
+              const person = plan.coveredIndividuals.find((p: any) => p.id === caseData.coveredPersonId);
+              if (person) {
+                patientName = person.name;
+                dob = person.dateOfBirth;
+              }
             }
-            resolve(c.json(result));
+
+            // Construct the template
+            const generatedBody = result.emailDraft?.body || "";
+
+            const finalBody = `
+Patient Name: ${patientName}
+Date of Birth: ${dob}
+
+To the ${insurerName} Appeals Department:
+
+Please be advised that this firm represents the above-referenced
+insured person (“the Plan Member”). This correspondence constitutes a
+formal, first-level appeal of the adverse benefit determination.
+
+${generatedBody}
+
+Respectfully submitted,
+
+PolicyPilot
+Patient Advocate`;
+
+            const finalSubject = `${userFullName} - Policy #${policyNumber}`;
+
+            const finalEmailDraft = {
+              subject: finalSubject,
+              body: finalBody
+            };
+
+            // Save result to DB
+            CaseModel.findOneAndUpdate(
+              { id },
+              { emailDraft: finalEmailDraft },
+              { new: true }
+            ).then(() => console.log(`💾 Saved email draft to DB for case ${id}`))
+              .catch(err => console.error(`❌ Failed to save email draft to DB: ${err}`));
+
+            resolve(c.json({ emailDraft: finalEmailDraft }));
+            // --- TEMPLATING LOGIC END ---
           }
         } catch (e) {
-          console.error("Failed to parse Python output:", dataString);
+          console.error("Failed to parse Python output or apply template:", e);
           resolve(c.json({ error: "Invalid response from email generation engine" }, 500));
         }
       });
@@ -457,10 +507,10 @@ export const generateFollowup = async (c: Context) => {
   try {
     const id = c.req.param("id");
     const { orchestrator } = require('../agent/orchestrator');
-    
+
     // Call orchestrator to generate follow-up
     const result = await orchestrator.generateFollowup(id);
-    
+
     return c.json({ emailDraft: result });
   } catch (e: any) {
     console.error('❌ Error generating follow-up:', e);

@@ -597,7 +597,7 @@ def main():
             model = genai.GenerativeModel('gemini-2.5-pro')
             
             email_prompt = f"""
-            Draft a professional appeal email (or follow-up) to the insurance company based on the context.
+            Draft the body paragraphs for a professional appeal email to the insurance company based on the context.
             
             **ROLE & PERSONA**:
             You are a specialized Health Insurance Denial Lawyer acting on behalf of your client (the insured). 
@@ -605,12 +605,12 @@ def main():
             Your tone should be professional, firm, authoritative, and legally grounded. Do not be aggressive, but be assertive.
             
             **INSTRUCTIONS**:
-            1. Clearly state that you are representing the insured regarding the denial of their claim.
-            2. Reference the specific policy sections and medical necessity criteria found in the context.
-            3. If there is previous email communication, directly address the points raised in the last received email.
-            4. **CRITICAL**: Use the "PREVIOUS DENIAL ANALYSIS" section to identify weaknesses in the insurer's denial and build your counter-argument. The analysis provides a layman's explanation of why the denial might be invalid—translate this into professional legal arguments.
-            5. Demand a specific remedy (e.g., "immediate reversal of the denial", "authorization of the service").
-            6. Keep the Subject Line consistent with the thread if possible, or use a strong, clear subject like "APPEAL: [Patient Name] - [Policy Number] - [Claim Number]".
+            1. **OUTPUT ONLY THE BODY PARAGRAPHS**. Do NOT include a salutation (e.g., "Dear X") and do NOT include a sign-off (e.g., "Sincerely Y"). These will be added by a template.
+            2. Start directly with the argument.
+            3. Reference the specific policy sections and medical necessity criteria found in the context.
+            4. If there is previous email communication, directly address the points raised in the last received email.
+            5. **CRITICAL**: Use the "PREVIOUS DENIAL ANALYSIS" section to identify weaknesses in the insurer's denial and build your counter-argument. The analysis provides a layman's explanation of why the denial might be invalid—translate this into professional legal arguments.
+            6. Demand a specific remedy (e.g., "immediate reversal of the denial", "authorization of the service").
             
             Context:
             ---
@@ -621,7 +621,8 @@ def main():
             
             {email_context}
             
-            Return the output as a JSON object with 'subject' and 'body' keys.
+            Return the output as a JSON object with 'subject' and 'body' keys. 
+            For 'subject', suggest a concise subject line like "APPEAL: [Patient Name] - [Policy Number]".
             """
             
             print("Calling Gemini for email draft...", file=sys.stderr)
@@ -724,11 +725,9 @@ def main():
 
             # 5. Generation (Gemini)
             print("Generating analysis with Gemini...", file=sys.stderr)
-            model = genai.GenerativeModel('gemini-2.5-pro')
-            # Actually user said "gemini 2.5 pro". Google released Gemini 1.5. There is no 2.5. I will assume they meant 1.5 Pro.
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
-            # Prompt 1: Analysis
-            analysis_prompt = f"""
+            combined_prompt = f"""
             You are an expert health insurance lawyer. Analyze the following context from the user's policy and denial letter/hospital bills.
             
             Context:
@@ -736,42 +735,46 @@ def main():
             {context_text}
             ---
             
-            Explain in simple layman's terms why the coverage was denied based on the provided text. 
-            Focus on the specific policy sections cited or relevant to the denial.
-            Then point out any statements that are not supported by the policy or are weak and easier to argue against.
-            Your output will use only plain text and no markdown.
+            **INSTRUCTIONS**:
+            1. **Analyze**: Explain in simple layman's terms why the coverage was denied based on the provided text. Focus on specific policy sections. Point out unsupported statements or weaknesses.
+               - Start directly with the analysis. No filler ("Of course", "As an expert").
+               - No markdown formatting (no #, **, *). Use standard paragraphs.
+               - No disclaimer.
+            
+            2. **Identify Terms**: Identify confusing legal or medical terms *that appear in your analysis above* and explain them in simple layman's terms.
+               - CRITICAL: The 'term' MUST be an EXACT substring found in your generated analysis text.
+            
+            Return a SINGLE JSON object with the following structure:
+            {{
+                "analysis": "The full text of your analysis...",
+                "terms": [
+                    {{ "term": "Exact Term", "definition": "Simple definition" }}
+                ]
+            }}
             """
             
-            # Prompt 2: Terms
-            terms_prompt = f"""
-            Identify confusing legal or medical terms in the provided context and explain them in simple layman's terms.
-            Return the output as a JSON list of objects with 'term' and 'definition' keys.
-            
-            Context:
-            ---
-            {context_text}
-            ---
-            
-            Example Output:
-            [
-                {{"term": "Medically Necessary", "definition": "Services that are reasonable and necessary for the diagnosis or treatment of illness or injury."}}
-            ]
-            """
-
-            # Execute Prompts (Analysis and Terms only - no email draft)
-            print("Calling Gemini for analysis...", file=sys.stderr)
-            analysis_response = model.generate_content(analysis_prompt)
-            print("Calling Gemini for terms...", file=sys.stderr)
-            terms_response = model.generate_content(terms_prompt)
-
-            # Parse Responses
-            print("Parsing responses...", file=sys.stderr)
-            analysis_text = analysis_response.text
+            print("Calling Gemini for analysis and terms...", file=sys.stderr)
+            response = model.generate_content(combined_prompt)
             
             try:
-                terms_json = json.loads(terms_response.text.strip().replace('```json', '').replace('```', ''))
+                # robust JSON extraction
+                text = response.text.strip()
+                start_idx = text.find('{')
+                end_idx = text.rfind('}')
+                
+                if start_idx != -1 and end_idx != -1:
+                    json_str = text[start_idx:end_idx+1]
+                    parsed_output = json.loads(json_str)
+                    analysis_text = parsed_output.get("analysis", "")
+                    terms_json = parsed_output.get("terms", [])
+                else:
+                    raise ValueError("No JSON object found in response")
+                    
             except Exception as e:
-                print(f"Failed to parse terms JSON: {e}", file=sys.stderr)
+                print(f"Failed to parse combined JSON: {e}", file=sys.stderr)
+                # Fallback: use the whole text as analysis if it doesn't look like JSON
+                # If we have the raw text but failed to parse JSON, use raw text as analysis
+                analysis_text = response.text.replace('```json', '').replace('```', '').strip()
                 terms_json = []
 
             # Construct Final Output (without email draft)
