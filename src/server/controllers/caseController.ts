@@ -465,9 +465,7 @@ Date of Birth: ${dob}
 To the ${insurerName} Appeals Department:
 
 Please be advised that this firm represents the above-referenced
-insured person (“the Plan Member”). This correspondence constitutes a
-formal, first-level appeal of the adverse benefit determination issued
-on ${denialDate}, which denied preauthorization for ${procedureName}.
+insured person.
 
 ${generatedBody}
 

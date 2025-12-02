@@ -331,8 +331,8 @@ def get_vector_store(case_id: str, user_id: str, force_refresh: bool = False):
         return None
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=500,
+        chunk_size=2000,
+        chunk_overlap=600,
         length_function=len,
         add_start_index=True,
     )
@@ -410,7 +410,7 @@ def main():
             # Query for plan details
             query = "insurance company name plan name policy number"
             print(f"DEBUG: Querying ChromaDB with: '{query}'", file=sys.stderr)
-            results = db.similarity_search(query, k=4)
+            results = db.similarity_search(query, k=10)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             for i, doc in enumerate(results):
                 print(f"DEBUG: Result {i+1} preview: {doc.page_content[:150]}...", file=sys.stderr)
@@ -483,7 +483,7 @@ def main():
             # Query for denial details
             query = "denial reason"
             print(f"DEBUG: Querying ChromaDB with: '{query}'", file=sys.stderr)
-            results = db.similarity_search(query, k=4)
+            results = db.similarity_search(query, k=10)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             for i, doc in enumerate(results):
                 print(f"DEBUG: Result {i+1} preview: {doc.page_content[:150]}...", file=sys.stderr)
@@ -494,7 +494,7 @@ def main():
             prompt = f"""
             Based on the following denial letter or hospital bill content, create a brief 1-sentence description of the issue.
             Focus on:
-            1. The type of service/treatment that was denied or billed
+            1. The specific service/treatment that was denied or billed
             2. The reason for denial (if mentioned)
             3. Keep it under 15 words
             
@@ -536,7 +536,7 @@ def main():
             query = "denial reason policy coverage exclusions"
             print(f"Querying: {query}", file=sys.stderr)
             
-            results = db.similarity_search_with_relevance_scores(query, k=4)
+            results = db.similarity_search_with_relevance_scores(query, k=10)
             print(f"Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             
             relevant_context = []
@@ -601,12 +601,11 @@ def main():
             
             **ROLE & PERSONA**:
             You are a specialized Health Insurance Denial Lawyer acting on behalf of your client (the insured). 
-            Write in the first person plural ("We", "Our firm") or as the legal representative ("I am writing on behalf of my client...").
             Your tone should be professional, firm, authoritative, and legally grounded. Do not be aggressive, but be assertive.
             
             **INSTRUCTIONS**:
-            1. **OUTPUT ONLY THE BODY PARAGRAPHS**. Do NOT include a salutation (e.g., "Dear X") and do NOT include a sign-off (e.g., "Sincerely Y"). These will be added by a template.
-            2. Start directly with the argument.
+            1. **OUTPUT ONLY THE BODY PARAGRAPHS**. Do NOT include a salutation or an introduction (e.g., "Dear X") and do NOT include a sign-off (e.g., "Sincerely Y"). These will be added by a template.
+            2. Start directly with what the denied coverage was and the argument.
             3. Reference the specific policy sections and medical necessity criteria found in the context.
             4. If there is previous email communication, directly address the points raised in the last received email.
             5. **CRITICAL**: Use the "PREVIOUS DENIAL ANALYSIS" section to identify weaknesses in the insurer's denial and build your counter-argument. The analysis provides a layman's explanation of why the denial might be invalid—translate this into professional legal arguments.
@@ -627,10 +626,7 @@ def main():
             {email_context}
             
             Return the output as a JSON object with keys:
-            - 'subject': Suggest a concise subject line like "APPEAL: [Patient Name] - [Policy Number]"
             - 'body': The body paragraphs of the email.
-            - 'denial_date': The extracted date (e.g., "January 1, 2024") or "[Date of Denial Letter]" if not found.
-            - 'procedure_name': The extracted procedure name or "[Name of Procedure/Treatment]" if not found.
             """
             
             print("Calling Gemini for email draft...", file=sys.stderr)
@@ -729,7 +725,7 @@ def main():
             query = "denial reason policy coverage exclusions"
             print(f"Querying: {query}", file=sys.stderr)
             
-            results = db.similarity_search_with_relevance_scores(query, k=4)
+            results = db.similarity_search_with_relevance_scores(query, k=10)
             print(f"DEBUG: Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             
             relevant_context = []
@@ -887,7 +883,7 @@ def main():
             query = "denial reason policy coverage exclusions medical necessity"
             print(f"Querying: {query}", file=sys.stderr)
             
-            results = db.similarity_search_with_relevance_scores(query, k=6)
+            results = db.similarity_search_with_relevance_scores(query, k=10)
             print(f"Retrieved {len(results)} results from ChromaDB", file=sys.stderr)
             
             relevant_context = []
