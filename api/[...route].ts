@@ -27,9 +27,15 @@ app.get("/health", (c) => {
 });
 
 // Connect to MongoDB before handling requests
+// Connect to MongoDB before handling requests
 app.use("*", async (c, next) => {
-    await connectDB();
-    return next();
+    try {
+        await connectDB();
+        return await next();
+    } catch (e: any) {
+        console.error("Database connection failed:", e);
+        return c.json({ error: "Database connection failed", details: e.message }, 500);
+    }
 });
 
 // Mount API routes
