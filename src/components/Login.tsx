@@ -66,8 +66,8 @@ export function Login({ onLogin }: LoginProps) {
     };
 
     const handleGoogleAuth = () => {
-        // Redirect to backend login endpoint
-        window.location.href = "http://localhost:8000/api/gmail/login";
+        // Redirect to backend login endpoint (using apiUrl for production compatibility)
+        window.location.href = apiUrl("/api/gmail/login");
     };
 
     const toggleMode = () => {

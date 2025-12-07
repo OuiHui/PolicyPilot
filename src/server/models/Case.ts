@@ -25,9 +25,10 @@ const parsedDataSchema = new mongoose.Schema({
   denialReason: String,
 });
 
+// Using 'as any' to avoid TS2590 complex union type error with Mongoose on Vercel's TypeScript 4.9
 const caseSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
-  userId: { type: String, required: true }, // Link to User
+  userId: { type: String, required: true },
   planId: String,
   coveredPersonId: String,
   denialReasonTitle: String,
@@ -71,6 +72,6 @@ const caseSchema = new mongoose.Schema({
   resolved: Boolean,
   resolvedDate: String,
   feedback: String,
-});
+} as any);
 
 export const CaseModel = mongoose.model("Case", caseSchema);
