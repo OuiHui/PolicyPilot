@@ -5,6 +5,7 @@ import { connectDB } from "../src/server/db";
 import userRoutes from "../src/server/routes/userRoutes";
 import planRoutes from "../src/server/routes/planRoutes";
 import caseRoutes from "../src/server/routes/caseRoutes";
+import gmailRoutes from "../src/server/routes/gmailRoutes";
 
 // Create the main app
 const app = new Hono().basePath("/api");
@@ -27,7 +28,6 @@ app.get("/health", (c) => {
 });
 
 // Connect to MongoDB before handling requests
-// Connect to MongoDB before handling requests
 app.use("*", async (c, next) => {
     try {
         await connectDB();
@@ -42,6 +42,7 @@ app.use("*", async (c, next) => {
 app.route("/users", userRoutes);
 app.route("/plans", planRoutes);
 app.route("/cases", caseRoutes);
+app.route("/gmail", gmailRoutes);
 
 // Export for Vercel
 export const GET = handle(app);
@@ -52,3 +53,4 @@ export const DELETE = handle(app);
 export const OPTIONS = handle(app);
 
 export default handle(app);
+

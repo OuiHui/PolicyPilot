@@ -4,6 +4,25 @@ import { gmailClient } from '../utils/gmail_client';
 import { orchestrator } from '../agent/orchestrator';
 import { UserModel } from '../models/User';
 
+// Get frontend URL dynamically for redirects
+const getFrontendUrl = (c: Context): string => {
+  // Check for environment variable first (for production)
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL;
+  }
+  // Fall back to request origin or localhost
+  const origin = c.req.header('origin') || c.req.header('referer');
+  if (origin) {
+    try {
+      const url = new URL(origin);
+      return `${url.protocol}//${url.host}`;
+    } catch {
+      // Invalid URL, fall back to localhost
+    }
+  }
+  return 'http://localhost:3000';
+};
+
 export const auth = async (c: Context) => {
   const oAuth2Client = await getOAuthClient();
   const authUrl = getAuthUrl(oAuth2Client);
@@ -48,8 +67,8 @@ export const oauthCallback = async (c: Context) => {
       );
 
       // Redirect to frontend with user info
-      // Assuming frontend is at localhost:3000
-      return c.redirect(`http://localhost:3000/login?userId=${user._id}&email=${user.email}&firstName=${user.firstName}&lastName=${user.lastName}&hipaaAccepted=${user.hipaaAccepted}`);
+      const frontendUrl = getFrontendUrl(c);
+      return c.redirect(`${frontendUrl}/login?userId=${user._id}&email=${user.email}&firstName=${user.firstName}&lastName=${user.lastName}&hipaaAccepted=${user.hipaaAccepted}`);
     } else {
       // --- AGENT AUTH FLOW ---
       await getAndSaveTokens(oAuth2Client, code);
@@ -62,8 +81,9 @@ export const oauthCallback = async (c: Context) => {
         console.error('Failed to set up Gmail watch:', watchError);
       }
 
-      // Redirect to login screen as requested
-      return c.redirect('http://localhost:3000/login');
+      // Redirect to login screen
+      const frontendUrl = getFrontendUrl(c);
+      return c.redirect(`${frontendUrl}/login`);
     }
   } catch (error) {
     console.error('Error in OAuth callback', error);
