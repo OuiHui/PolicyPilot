@@ -5,7 +5,9 @@ import { connectDB } from "../src/server/db";
 import userRoutes from "../src/server/routes/userRoutes";
 import planRoutes from "../src/server/routes/planRoutes";
 import caseRoutes from "../src/server/routes/caseRoutes";
-import gmailRoutes from "../src/server/routes/gmailRoutes";
+// NOTE: Gmail routes are NOT included on Vercel because they require
+// filesystem access for OAuth token storage which is not available in serverless.
+// Google OAuth login only works in local development.
 
 // Create the main app
 const app = new Hono().basePath("/api");
@@ -42,7 +44,6 @@ app.use("*", async (c, next) => {
 app.route("/users", userRoutes);
 app.route("/plans", planRoutes);
 app.route("/cases", caseRoutes);
-app.route("/gmail", gmailRoutes);
 
 // Export for Vercel
 export const GET = handle(app);

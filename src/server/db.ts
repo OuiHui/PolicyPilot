@@ -5,6 +5,9 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/policypilot";
 
+// Log whether MONGODB_URI is set (for debugging Vercel)
+console.log("MONGODB_URI configured:", MONGODB_URI ? "Yes" : "No (using localhost fallback)");
+
 // Cache the connection promise to prevent multiple connections in serverless env
 let cachedPromise: Promise<typeof mongoose> | null = null;
 
@@ -19,15 +22,19 @@ export const connectDB = async () => {
       return;
     }
 
-    cachedPromise = mongoose.connect(MONGODB_URI);
+    // Add connection options for serverless environment
+    cachedPromise = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // 5 second timeout for initial connection
+      socketTimeoutMS: 10000, // 10 second timeout for operations
+    });
     await cachedPromise;
 
     const dbName = mongoose.connection.db?.databaseName || 'unknown';
     console.log(`Connected to MongoDB - Database: ${dbName}`);
   } catch (error) {
     console.error("MongoDB connection error:", error);
-    // Do NOT exit process in serverless environment
-    // process.exit(1);
-    throw error; // Re-throw so the caller knows it failed
+    cachedPromise = null; // Reset cache on failure to allow retry
+    throw error;
   }
 };
+
