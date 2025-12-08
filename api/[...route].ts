@@ -24,9 +24,21 @@ app.use(
     })
 );
 
-// Health check endpoint
+// Health check endpoint (no MongoDB)
 app.get("/health", (c) => {
-    return c.json({ status: "ok" });
+    return c.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Test MongoDB connection separately
+app.get("/health/mongo", async (c) => {
+    try {
+        console.log("Testing MongoDB connection...");
+        await connectDB();
+        return c.json({ status: "connected", db: "mongodb" });
+    } catch (e: any) {
+        console.error("MongoDB health check failed:", e);
+        return c.json({ status: "failed", error: e.message }, 500);
+    }
 });
 
 // Connect to MongoDB before handling requests
