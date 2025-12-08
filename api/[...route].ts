@@ -1,38 +1,36 @@
+// Main API handler for Vercel
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { connectDB } from "../src/server/db";
+
+console.log("✅ Step 1: Base imports done");
+
+// Import ALL routes like the original
 import userRoutes from "../src/server/routes/userRoutes";
+console.log("✅ Step 2a: userRoutes imported");
+
 import planRoutes from "../src/server/routes/planRoutes";
+console.log("✅ Step 2b: planRoutes imported");
+
 import caseRoutes from "../src/server/routes/caseRoutes";
+console.log("✅ Step 2c: caseRoutes imported");
 
-console.log("✅ Vercel API: All imports loaded");
-
-// Create the main app
 const app = new Hono().basePath("/api");
 
-// Enable CORS
 app.use("/*", cors({
     origin: "*",
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    exposeHeaders: ["Content-Length"],
-    maxAge: 600,
 }));
 
-// Health check endpoint (no MongoDB) - MUST be before the DB middleware
+// Health check (no DB)
 app.get("/health", (c) => {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Connect to MongoDB ONLY for non-health routes
+// Connect to MongoDB middleware
 app.use("*", async (c, next) => {
-    // Skip MongoDB for health endpoints
-    const path = c.req.path;
-    if (path === "/api/health" || path.startsWith("/api/health/")) {
-        return await next();
-    }
-
     try {
         await connectDB();
         return await next();
@@ -42,26 +40,13 @@ app.use("*", async (c, next) => {
     }
 });
 
-// Test MongoDB connection separately
-app.get("/health/mongo", async (c) => {
-    try {
-        console.log("Testing MongoDB connection...");
-        await connectDB();
-        return c.json({ status: "connected", db: "mongodb" });
-    } catch (e: any) {
-        console.error("MongoDB health check failed:", e);
-        return c.json({ status: "failed", error: e.message }, 500);
-    }
-});
-
-// Mount API routes
+// Mount ALL routes
 app.route("/users", userRoutes);
 app.route("/plans", planRoutes);
 app.route("/cases", caseRoutes);
 
-console.log("✅ Vercel API: All routes mounted");
+console.log("✅ Step 3: All routes mounted");
 
-// Export for Vercel
 export const GET = handle(app);
 export const POST = handle(app);
 export const PATCH = handle(app);
@@ -69,4 +54,4 @@ export const PUT = handle(app);
 export const DELETE = handle(app);
 export const OPTIONS = handle(app);
 
-export default handle(app);
+console.log("✅ Step 4: All handlers exported");
