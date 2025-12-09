@@ -27,7 +27,7 @@ image = (
         "langchain-community",
         "langchain-huggingface",
         "chromadb",
-        "google-generativeai",
+        "google-generativeai>=0.8.0",  # Pin to version that supports gemini-1.5 models
         "python-dotenv",
         "pypdf",
         "sentence-transformers",
