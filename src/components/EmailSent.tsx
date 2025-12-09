@@ -1,26 +1,63 @@
-import { CheckCircle, Eye, Mail, Clock, Home, Loader2 } from 'lucide-react';
+import { CheckCircle, Eye, Mail, Clock, Home, Loader2, ClipboardPaste, Send } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
+import { Textarea } from './ui/textarea';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { ProgressBar } from './ProgressBar';
-import type { Case } from '../App';
+import type { Case, EmailMessage } from '../App';
 
 type EmailSentProps = {
   case: Case;
   onViewReply: () => void;
   onBackToDashboard: () => void;
+  onReplySubmitted?: (reply: EmailMessage) => void;
 };
 
-export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: EmailSentProps) {
+export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard, onReplySubmitted }: EmailSentProps) {
   const insurerName = caseItem.parsedData?.insurer || caseItem.insuranceCompany;
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [showPasteSection, setShowPasteSection] = useState(false);
+  const [pastedReply, setPastedReply] = useState('');
+  const [replyFrom, setReplyFrom] = useState('');
+  const [replySubject, setReplySubject] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleSubmitReply = async () => {
+    if (!pastedReply.trim()) {
+      alert('Please paste the insurance company\'s reply');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Create an email message from the pasted content
+      const replyMessage: EmailMessage = {
+        id: `pasted-${Date.now()}`,
+        from: replyFrom || `claims@${insurerName?.toLowerCase().replace(/\s+/g, '')}.com`,
+        to: 'policypilotco@gmail.com',
+        subject: replySubject || `Re: Appeal for Claim Denial - Policy #${caseItem.parsedData?.policyNumber}`,
+        body: pastedReply,
+        date: new Date().toISOString(),
+        type: 'received',
+      };
+
+      if (onReplySubmitted) {
+        onReplySubmitted(replyMessage);
+      }
+    } catch (error) {
+      console.error('Error submitting reply:', error);
+      alert('Failed to process reply. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <ProgressBar currentStep={3} />
-      
+
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Success Message */}
         <div className="text-center mb-8">
@@ -43,11 +80,11 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-gray-900">Monitoring Active</h2>
-                <Badge className="bg-green-600">Active</Badge>
+                <h2 className="text-gray-900">Awaiting Response</h2>
+                <Badge className="bg-yellow-600">Waiting</Badge>
               </div>
               <p className="text-gray-600">
-                We're now monitoring your inbox for a reply from {insurerName}
+                When you receive a reply from {insurerName}, paste it below and we'll help you analyze it.
               </p>
             </div>
           </div>
@@ -57,15 +94,100 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
               <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-blue-900 mb-2">
-                  <strong>What's happening now:</strong>
+                  <strong>What to do when you receive a reply:</strong>
                 </p>
                 <p className="text-blue-800">
-                  We're continuously checking your inbox for any response from the insurance company. 
-                  When they reply, we'll notify you immediately and help you analyze their response.
+                  Open the email from the insurance company, copy the entire message, and paste it in the section below. We'll analyze their response and help you draft an effective follow-up.
                 </p>
               </div>
             </div>
           </div>
+        </Card>
+
+        {/* Paste Reply Section */}
+        <Card className="p-6 mb-6 border-2 border-dashed border-blue-300 bg-blue-50">
+          <div className="flex items-center gap-2 mb-4">
+            <ClipboardPaste className="w-5 h-5 text-blue-600" />
+            <h3 className="text-gray-900 font-semibold">Paste Insurance Company's Reply</h3>
+          </div>
+
+          {!showPasteSection ? (
+            <Button
+              onClick={() => setShowPasteSection(true)}
+              variant="outline"
+              className="w-full"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              I received a reply - paste it here
+            </Button>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="replyFrom" className="text-gray-700 mb-2 block">From (optional)</Label>
+                  <Input
+                    id="replyFrom"
+                    value={replyFrom}
+                    onChange={(e) => setReplyFrom(e.target.value)}
+                    placeholder={`claims@${insurerName?.toLowerCase().replace(/\s+/g, '')}.com`}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="replySubject" className="text-gray-700 mb-2 block">Subject (optional)</Label>
+                  <Input
+                    id="replySubject"
+                    value={replySubject}
+                    onChange={(e) => setReplySubject(e.target.value)}
+                    placeholder="Re: Appeal for Claim Denial"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="replyBody" className="text-gray-700 mb-2 block">
+                  Email Body <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="replyBody"
+                  value={pastedReply}
+                  onChange={(e) => setPastedReply(e.target.value)}
+                  placeholder="Paste the insurance company's reply here..."
+                  className="min-h-[200px] font-mono text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSubmitReply}
+                  disabled={!pastedReply.trim() || isSubmitting}
+                  className="flex-1"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Analyze Reply & Draft Response
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPasteSection(false);
+                    setPastedReply('');
+                    setReplyFrom('');
+                    setReplySubject('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Timeline */}
@@ -101,53 +223,11 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
               <div className="flex-1">
                 <p className="text-gray-600 mb-1">Response Received</p>
                 <p className="text-gray-500">
-                  We'll notify you and help you understand their reply
+                  Paste their reply above and we'll help you respond
                 </p>
               </div>
             </div>
           </div>
-        </Card>
-
-        {/* Sync Button - Manual Check */}
-        <Card className="p-6 bg-blue-50 border-blue-200 mb-6">
-          <h3 className="text-gray-900 mb-2">Check for Replies</h3>
-          <p className="text-gray-600 mb-4">
-            If you've received a reply in your inbox, click below to sync it with the app.
-          </p>
-          <Button 
-            onClick={async () => {
-                try {
-                    setIsSyncing(true);
-                    const { apiUrl } = await import('../config');
-                    const res = await fetch(apiUrl('/api/gmail/sync'), { method: 'POST' });
-                    const data = await res.json();
-                    if (data.success) {
-                        // Always check for updates, even if processed count is 0
-                        // (e.g. if we missed the update previously)
-                        onViewReply(); 
-                    }
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    setIsSyncing(false);
-                }
-            }} 
-            variant="outline" 
-            className="w-full"
-            disabled={isSyncing}
-          >
-            {isSyncing ? (
-                <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Syncing...
-                </>
-            ) : (
-                <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Sync Emails
-                </>
-            )}
-          </Button>
         </Card>
 
         {/* Next Steps */}
@@ -163,7 +243,7 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
             <li className="flex items-start gap-2">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <span>
-                Check your email regularly (we'll also send you notifications)
+                Check your email regularly for a response from {insurerName}
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -186,3 +266,4 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
     </div>
   );
 }
+

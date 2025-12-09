@@ -807,6 +807,24 @@ export default function App() {
     }
   };
 
+  // Handle manually pasted reply from insurance company
+  const handleReplySubmitted = async (reply: EmailMessage) => {
+    if (!currentCaseId) return;
+    const currentCase = getCurrentCase();
+    if (!currentCase) return;
+
+    // Add the pasted reply to the email thread and update case status
+    await updateCaseInDb(currentCaseId, {
+      emailThread: [...currentCase.emailThread, reply],
+      status: 'reply-received',
+      currentStep: 'reply-received',
+      hasNewEmail: true
+    });
+
+    // Navigate to reply-received screen to analyze the response
+    setCurrentScreen('reply-received');
+  };
+
   const handleViewCase = (caseId: string) => {
     setCurrentCaseId(caseId);
     setCurrentScreen("case-detail");
@@ -1093,6 +1111,7 @@ export default function App() {
           case={currentCase}
           onViewReply={handleSyncComplete}
           onBackToDashboard={() => setCurrentScreen('dashboard')}
+          onReplySubmitted={handleReplySubmitted}
         />;
       case 'reply-received':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
