@@ -2,6 +2,9 @@
  * Modal API Client
  * 
  * Calls the Modal.com serverless Python endpoints for AI features.
+ * 
+ * Modal URL format: https://{username}--{app-name}-{function-name}.modal.run
+ * MODAL_API_URL should be set to: https://huynguy127--policypilot-rag
  */
 
 const MODAL_API_URL = process.env.MODAL_API_URL || '';
@@ -11,13 +14,24 @@ interface ModalResponse<T> {
     error?: string;
 }
 
+/**
+ * Build Modal function URL.
+ * Modal uses subdomain format: {base}-{endpoint}.modal.run
+ */
+function buildModalUrl(endpoint: string): string {
+    // MODAL_API_URL should be like: https://huynguy127--policypilot-rag
+    // Endpoint is like: extract-denial
+    // Result should be: https://huynguy127--policypilot-rag-extract-denial.modal.run
+    return `${MODAL_API_URL}-${endpoint}.modal.run`;
+}
+
 async function callModal<T>(endpoint: string, body: object): Promise<ModalResponse<T>> {
     if (!MODAL_API_URL) {
         console.warn('MODAL_API_URL not configured');
         return { error: 'Modal API not configured. Please set MODAL_API_URL environment variable.' };
     }
 
-    const url = `${MODAL_API_URL}/${endpoint}`;
+    const url = buildModalUrl(endpoint);
     console.log(`Calling Modal: ${url}`);
 
     try {
@@ -92,9 +106,10 @@ export async function checkModalHealth(): Promise<boolean> {
     if (!MODAL_API_URL) return false;
 
     try {
-        const response = await fetch(`${MODAL_API_URL}/health`);
+        const response = await fetch(buildModalUrl('health'));
         return response.ok;
     } catch {
         return false;
     }
 }
+
