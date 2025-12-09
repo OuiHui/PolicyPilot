@@ -184,7 +184,7 @@ async def extract_denial(request: dict):
         context_text = "\n\n".join([doc.page_content for doc in results])
         
         # Generate brief description
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         prompt = f"""
         Create a brief 1-sentence description (under 15 words) of why this claim was denied.
         
@@ -258,7 +258,7 @@ async def generate_email(request: dict):
         context_text = "\n\n".join(relevant_context)
         
         # Generate email with Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         prompt = f"""
         Draft body paragraphs for a professional insurance appeal email.
         You are a Health Insurance Denial Lawyer.
@@ -316,7 +316,7 @@ async def generate_followup(request: dict):
             for e in email_thread
         ])
         
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         prompt = f"""
         Write a professional follow-up email responding to the latest message.
         
@@ -406,7 +406,7 @@ async def extract_plan(request: dict):
         context_text = "\n\n".join([doc.page_content for doc in results])
         
         # Generate extraction with Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         prompt = f"""
         Extract the following insurance plan details from the context:
         1. Insurance Company Name
