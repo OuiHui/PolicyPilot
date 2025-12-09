@@ -164,9 +164,11 @@ export const extractPlanDetails = async (c: Context) => {
         // Convert files to base64
         const filesData: modal.FileData[] = [];
         for (const file of fileList) {
+          console.log(`Processing file: ${typeof file}, instanceof File: ${file instanceof File}`);
           if (file instanceof File) {
             const buffer = await file.arrayBuffer();
             const base64 = Buffer.from(buffer).toString('base64');
+            console.log(`Converted file ${file.name} to base64 (${base64.length} chars)`);
             filesData.push({
               name: file.name,
               data: base64
@@ -174,7 +176,14 @@ export const extractPlanDetails = async (c: Context) => {
           }
         }
 
+        console.log(`Sending ${filesData.length} files to Modal`);
+
+        if (filesData.length === 0) {
+          return c.json({ error: "No valid files could be processed for extraction" }, 400);
+        }
+
         const result = await modal.extractPlanViaModal(filesData);
+        console.log(`Modal result:`, result);
         if (result.error) {
           return c.json({ error: result.error }, 500);
         }
