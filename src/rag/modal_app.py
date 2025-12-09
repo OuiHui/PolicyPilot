@@ -340,8 +340,100 @@ async def generate_followup(request: dict):
         return {"error": str(e)}
 
 
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("custom-secret")],
+    timeout=300,
+)
+@modal.fastapi_endpoint(method="POST")
+async def extract_plan(request: dict):
+    """
+    Extract insurance plan details from policy document files.
+    
+    POST body: { "files": [{ "name": "file.pdf", "data": "base64-encoded-data" }] }
+    Returns: { "insuranceCompany": "string", "planName": "string", "policyNumber": "string" }
+    """
+    from langchain_community.document_loaders import PyPDFLoader
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_community.vectorstores import Chroma
+    import google.generativeai as genai
+    import base64
+    
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    
+    files = request.get("files", [])
+    if not files:
+        return {"error": "No files provided"}
+    
+    try:
+        docs = []
+        
+        # Process each base64-encoded file
+        for file_info in files:
+            file_name = file_info.get("name", "document.pdf")
+            file_data_b64 = file_info.get("data", "")
+            
+            if not file_data_b64:
+                continue
+                
+            # Decode base64 to bytes
+            file_bytes = base64.b64decode(file_data_b64)
+            
+            # Write to temp file and load
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(file_bytes)
+                tmp.flush()
+                
+                try:
+                    loader = PyPDFLoader(tmp.name)
+                    docs.extend(loader.load())
+                finally:
+                    os.unlink(tmp.name)
+        
+        if not docs:
+            return {"error": "No documents could be loaded"}
+        
+        # Create embeddings and query
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(docs)
+        
+        embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        vector_db = Chroma.from_documents(documents=chunks, embedding=embedding_function)
+        
+        # Query for plan details
+        results = vector_db.similarity_search("insurance company name plan name policy number", k=10)
+        context_text = "\n\n".join([doc.page_content for doc in results])
+        
+        # Generate extraction with Gemini
+        model = genai.GenerativeModel('gemini-2.5-pro')
+        prompt = f"""
+        Extract the following insurance plan details from the context:
+        1. Insurance Company Name
+        2. Plan Name
+        3. Policy Number (Member ID, Subscriber ID, or Policy ID)
+
+        Context:
+        ---
+        {context_text}
+        ---
+
+        Return ONLY a JSON object with keys: 'insuranceCompany', 'planName', 'policyNumber'.
+        If a field is not found, use "Unknown".
+        """
+        
+        response = model.generate_content(prompt)
+        text = response.text.strip().replace('```json', '').replace('```', '')
+        
+        return json.loads(text)
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.function(image=image)
 @modal.fastapi_endpoint(method="GET")
 async def health():
     """Health check endpoint"""
     return {"status": "ok", "service": "policypilot-rag"}
+

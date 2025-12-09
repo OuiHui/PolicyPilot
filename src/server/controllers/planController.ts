@@ -5,9 +5,16 @@ import path from "path";
 import os from "os";
 import { spawn } from "child_process";
 import { supabaseServer } from "../supabase/client";
+import * as modal from "../utils/modal_client";
 
 // Check if running on Vercel (Python not available in serverless)
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+
+// Check if Modal is configured
+const hasModal = !!process.env.MODAL_API_URL;
+
+// Helper to check if we should use Modal (Vercel + Modal configured)
+const useModal = () => isVercel && hasModal;
 
 export const getPlans = async (c: Context) => {
   try {
@@ -141,14 +148,6 @@ export const updatePlan = async (c: Context) => {
 
 export const extractPlanDetails = async (c: Context) => {
   try {
-    // On Vercel: plan extraction requires file upload which isn't supported via Modal yet
-    if (isVercel) {
-      return c.json({
-        error: "Plan extraction is not available in cloud deployment. Please manually enter plan details or use the local development environment.",
-        isVercelLimitation: true
-      }, 501);
-    }
-
     const body = await c.req.parseBody();
     const files = body["files[]"];
     const fileList = Array.isArray(files) ? files : files ? [files] : [];
@@ -157,6 +156,38 @@ export const extractPlanDetails = async (c: Context) => {
       return c.json({ error: "No files uploaded" }, 400);
     }
 
+    // On Vercel: use Modal if configured
+    if (isVercel) {
+      if (useModal()) {
+        console.log(`🚀 Calling Modal for plan extraction with ${fileList.length} files`);
+
+        // Convert files to base64
+        const filesData: modal.FileData[] = [];
+        for (const file of fileList) {
+          if (file instanceof File) {
+            const buffer = await file.arrayBuffer();
+            const base64 = Buffer.from(buffer).toString('base64');
+            filesData.push({
+              name: file.name,
+              data: base64
+            });
+          }
+        }
+
+        const result = await modal.extractPlanViaModal(filesData);
+        if (result.error) {
+          return c.json({ error: result.error }, 500);
+        }
+        return c.json(result.data);
+      }
+
+      return c.json({
+        error: "Plan extraction requires MODAL_API_URL to be configured. Please set it in Vercel environment variables.",
+        isVercelLimitation: true
+      }, 501);
+    }
+
+    // Local: use Python
     // Create temp directory
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "plan-extract-"));
     const filePaths: string[] = [];

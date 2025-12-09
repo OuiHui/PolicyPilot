@@ -102,6 +102,21 @@ export async function generateFollowupViaModal(caseId: string, emailThread: Emai
     return callModal<GenerateEmailResult>('generate-followup', { caseId, emailThread });
 }
 
+export interface ExtractPlanResult {
+    insuranceCompany: string;
+    planName: string;
+    policyNumber: string;
+}
+
+export interface FileData {
+    name: string;
+    data: string; // base64-encoded file content
+}
+
+export async function extractPlanViaModal(files: FileData[]): Promise<ModalResponse<ExtractPlanResult>> {
+    return callModal<ExtractPlanResult>('extract-plan', { files });
+}
+
 export async function checkModalHealth(): Promise<boolean> {
     if (!MODAL_API_URL) return false;
 
@@ -112,4 +127,5 @@ export async function checkModalHealth(): Promise<boolean> {
         return false;
     }
 }
+
 
