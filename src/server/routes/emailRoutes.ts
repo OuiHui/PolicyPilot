@@ -19,11 +19,12 @@ app.post('/send', async (c: Context) => {
 
         console.log(`Sending email to ${to} with subject: ${subject}`);
 
-        // Send the email via Resend
+        // Send the email via Resend with reply-to for case tracking
         const result = await sendEmail({
             to,
             subject,
             body: message,
+            caseId, // Enables reply-to for inbound email tracking
         });
 
         console.log(`Email sent successfully, ID: ${result.id}`);
