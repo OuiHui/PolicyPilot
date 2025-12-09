@@ -6,6 +6,9 @@ import os from "os";
 import { spawn } from "child_process";
 import { supabaseServer } from "../supabase/client";
 
+// Check if running on Vercel (Python not available in serverless)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+
 export const getPlans = async (c: Context) => {
   try {
     const userId = c.req.query("userId");
@@ -138,6 +141,14 @@ export const updatePlan = async (c: Context) => {
 
 export const extractPlanDetails = async (c: Context) => {
   try {
+    // On Vercel: plan extraction requires file upload which isn't supported via Modal yet
+    if (isVercel) {
+      return c.json({
+        error: "Plan extraction is not available in cloud deployment. Please manually enter plan details or use the local development environment.",
+        isVercelLimitation: true
+      }, 501);
+    }
+
     const body = await c.req.parseBody();
     const files = body["files[]"];
     const fileList = Array.isArray(files) ? files : files ? [files] : [];
