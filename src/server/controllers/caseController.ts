@@ -10,6 +10,18 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
+// Check if running on Vercel (Python not available in serverless)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+
+// Helper to return error for Python-dependent features on Vercel
+const pythonNotAvailable = (c: Context, feature: string) => {
+  console.warn(`⚠️ ${feature} requires Python which is not available on Vercel`);
+  return c.json({
+    error: `${feature} is not available in the cloud deployment. Please use the local development environment for AI-powered features.`,
+    isVercelLimitation: true
+  }, 501);
+};
+
 export const getCases = async (c: Context) => {
   try {
     const userId = c.req.query("userId");
@@ -246,6 +258,11 @@ export const analyzeCase = async (c: Context) => {
       return c.json({ error: "User ID is required" }, 400);
     }
 
+    // Python-dependent: not available on Vercel
+    if (isVercel) {
+      return pythonNotAvailable(c, "Case analysis");
+    }
+
     // Check cache first
     const existingCase = await CaseModel.findOne({ id });
     if (existingCase?.analysis?.analysis) {
@@ -360,6 +377,11 @@ export const generateEmail = async (c: Context) => {
     if (existingCase?.emailDraft?.body) {
       console.log(`🧠 Returning cached email draft for case ${id}`);
       return c.json({ emailDraft: existingCase.emailDraft });
+    }
+
+    // Python-dependent: not available on Vercel (only if not cached)
+    if (isVercel) {
+      return pythonNotAvailable(c, "Email generation");
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
@@ -508,6 +530,12 @@ Patient Advocate`;
 export const generateFollowup = async (c: Context) => {
   try {
     const id = c.req.param("id");
+
+    // Python-dependent: not available on Vercel
+    if (isVercel) {
+      return pythonNotAvailable(c, "Follow-up generation");
+    }
+
     const { orchestrator } = require('../agent/orchestrator');
 
     // Call orchestrator to generate follow-up
@@ -538,6 +566,11 @@ export const extractDenial = async (c: Context) => {
     if (caseData.denialReasonTitle) {
       console.log(`🧠 Returning cached denial extraction for case ${id}`);
       return c.json({ briefDescription: caseData.denialReasonTitle });
+    }
+
+    // Python-dependent: not available on Vercel (only if not cached)
+    if (isVercel) {
+      return pythonNotAvailable(c, "Denial extraction");
     }
 
     // Create temp directory for files

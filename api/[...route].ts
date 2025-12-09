@@ -16,6 +16,9 @@ console.log("✅ Step 2b: planRoutes imported");
 import caseRoutes from "../src/server/routes/caseRoutes";
 console.log("✅ Step 2c: caseRoutes imported");
 
+import emailRoutes from "../src/server/routes/emailRoutes";
+console.log("✅ Step 2d: emailRoutes imported (Resend)");
+
 const app = new Hono().basePath("/api");
 
 app.use("/*", cors({
@@ -44,6 +47,7 @@ app.use("*", async (c, next) => {
 app.route("/users", userRoutes);
 app.route("/plans", planRoutes);
 app.route("/cases", caseRoutes);
+app.route("/gmail", emailRoutes); // Using Resend, kept /gmail path for frontend compatibility
 
 console.log("✅ Step 3: All routes mounted");
 
