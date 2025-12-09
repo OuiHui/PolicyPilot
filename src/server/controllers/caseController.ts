@@ -6,6 +6,8 @@ import fs from "fs";
 import os from "os";
 import { supabaseServer } from "../supabase/client";
 import dotenv from "dotenv";
+import * as gemini from "../utils/gemini_client";
+import * as modal from "../utils/modal_client";
 
 // Load environment variables
 dotenv.config();
@@ -13,11 +15,17 @@ dotenv.config();
 // Check if running on Vercel (Python not available in serverless)
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 
-// Helper to return error for Python-dependent features on Vercel
+// Check if Modal is configured
+const hasModal = !!process.env.MODAL_API_URL;
+
+// Helper to check if we should use Modal (Vercel + Modal configured)
+const useModal = () => isVercel && hasModal;
+
+// Helper to return error for Python-dependent features when no fallback available
 const pythonNotAvailable = (c: Context, feature: string) => {
   console.warn(`⚠️ ${feature} requires Python which is not available on Vercel`);
   return c.json({
-    error: `${feature} is not available in the cloud deployment. Please use the local development environment for AI-powered features.`,
+    error: `${feature} is not available in the cloud deployment. Please set MODAL_API_URL or use the local development environment.`,
     isVercelLimitation: true
   }, 501);
 };
@@ -258,16 +266,31 @@ export const analyzeCase = async (c: Context) => {
       return c.json({ error: "User ID is required" }, 400);
     }
 
-    // Python-dependent: not available on Vercel
-    if (isVercel) {
-      return pythonNotAvailable(c, "Case analysis");
-    }
-
     // Check cache first
     const existingCase = await CaseModel.findOne({ id });
     if (existingCase?.analysis?.analysis) {
       console.log(`🧠 Returning cached analysis for case ${id}`);
       return c.json(existingCase.analysis);
+    }
+
+    // On Vercel: try Modal API if configured
+    if (isVercel) {
+      if (useModal()) {
+        console.log(`🚀 Calling Modal for case analysis: case ${id}`);
+        const result = await modal.analyzeCaseViaModal(id, userId);
+        if (result.error) {
+          return c.json({ error: result.error }, 500);
+        }
+        // Cache the result
+        if (result.data) {
+          await CaseModel.findOneAndUpdate(
+            { id },
+            { analysis: result.data }
+          );
+        }
+        return c.json(result.data);
+      }
+      return pythonNotAvailable(c, "Case analysis");
     }
 
     const scriptPath = path.join(process.cwd(), "src", "rag", "pipeline.py");
@@ -379,8 +402,23 @@ export const generateEmail = async (c: Context) => {
       return c.json({ emailDraft: existingCase.emailDraft });
     }
 
-    // Python-dependent: not available on Vercel (only if not cached)
+    // On Vercel: try Modal API if configured
     if (isVercel) {
+      if (useModal()) {
+        console.log(`🚀 Calling Modal for email generation: case ${id}`);
+        const result = await modal.generateEmailViaModal(id, userId);
+        if (result.error) {
+          return c.json({ error: result.error }, 500);
+        }
+        // Cache the result
+        if (result.data?.emailDraft) {
+          await CaseModel.findOneAndUpdate(
+            { id },
+            { emailDraft: result.data.emailDraft }
+          );
+        }
+        return c.json(result.data);
+      }
       return pythonNotAvailable(c, "Email generation");
     }
 
@@ -531,8 +569,19 @@ export const generateFollowup = async (c: Context) => {
   try {
     const id = c.req.param("id");
 
-    // Python-dependent: not available on Vercel
+    // On Vercel: try Modal API if configured
     if (isVercel) {
+      if (useModal()) {
+        console.log(`🚀 Calling Modal for follow-up generation: case ${id}`);
+        // Get the case to access email thread
+        const caseData = await CaseModel.findOne({ id });
+        const emailThread = caseData?.emailThread || [];
+        const result = await modal.generateFollowupViaModal(id, emailThread);
+        if (result.error) {
+          return c.json({ error: result.error }, 500);
+        }
+        return c.json(result.data);
+      }
       return pythonNotAvailable(c, "Follow-up generation");
     }
 
@@ -568,8 +617,23 @@ export const extractDenial = async (c: Context) => {
       return c.json({ briefDescription: caseData.denialReasonTitle });
     }
 
-    // Python-dependent: not available on Vercel (only if not cached)
+    // On Vercel: try Modal API if configured
     if (isVercel) {
+      if (useModal()) {
+        console.log(`🚀 Calling Modal for denial extraction: case ${id}`);
+        const result = await modal.extractDenialViaModal(id);
+        if (result.error) {
+          return c.json({ error: result.error }, 500);
+        }
+        // Cache the result
+        if (result.data?.briefDescription) {
+          await CaseModel.findOneAndUpdate(
+            { id },
+            { denialReasonTitle: result.data.briefDescription }
+          );
+        }
+        return c.json(result.data);
+      }
       return pythonNotAvailable(c, "Denial extraction");
     }
 
