@@ -20,6 +20,7 @@ app = modal.App("policypilot-rag")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install([
+        "fastapi",  # Required for @modal.fastapi_endpoint
         "pymongo",
         "supabase",
         "langchain-text-splitters",
@@ -35,7 +36,7 @@ image = (
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("policypilot-secrets")],  # Configure in Modal dashboard
+    secrets=[modal.Secret.from_name("custom-secret")],  # Configure in Modal dashboard
     timeout=300,  # 5 minute timeout for long operations
 )
 @modal.fastapi_endpoint(method="POST")
@@ -109,7 +110,7 @@ async def analyze_case(request: dict):
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("policypilot-secrets")],
+    secrets=[modal.Secret.from_name("custom-secret")],
     timeout=300,
 )
 @modal.fastapi_endpoint(method="POST")
@@ -213,7 +214,7 @@ async def extract_denial(request: dict):
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("policypilot-secrets")],
+    secrets=[modal.Secret.from_name("custom-secret")],
     timeout=300,
 )
 @modal.fastapi_endpoint(method="POST")
@@ -288,7 +289,7 @@ async def generate_email(request: dict):
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("policypilot-secrets")],
+    secrets=[modal.Secret.from_name("custom-secret")],
     timeout=300,
 )
 @modal.fastapi_endpoint(method="POST")
