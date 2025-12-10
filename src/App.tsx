@@ -1112,6 +1112,7 @@ export default function App() {
           onViewReply={handleSyncComplete}
           onBackToDashboard={() => setCurrentScreen('dashboard')}
           onReplySubmitted={handleReplySubmitted}
+          onSyncComplete={handleSyncComplete}
         />;
       case 'reply-received':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;

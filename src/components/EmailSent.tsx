@@ -1,4 +1,4 @@
-import { CheckCircle, Eye, Mail, Clock, Home, Loader2, ClipboardPaste, Send } from 'lucide-react';
+import { CheckCircle, Eye, Mail, Clock, Home, Loader2, ClipboardPaste, Send, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -7,6 +7,7 @@ import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ProgressBar } from './ProgressBar';
+import { apiUrl } from '../config';
 import type { Case, EmailMessage } from '../App';
 
 type EmailSentProps = {
@@ -14,15 +15,50 @@ type EmailSentProps = {
   onViewReply: () => void;
   onBackToDashboard: () => void;
   onReplySubmitted?: (reply: EmailMessage) => void;
+  onSyncComplete?: () => void;
 };
 
-export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard, onReplySubmitted }: EmailSentProps) {
+export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard, onReplySubmitted, onSyncComplete }: EmailSentProps) {
   const insurerName = caseItem.parsedData?.insurer || caseItem.insuranceCompany;
   const [showPasteSection, setShowPasteSection] = useState(false);
   const [pastedReply, setPastedReply] = useState('');
   const [replyFrom, setReplyFrom] = useState('');
   const [replySubject, setReplySubject] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const handleSyncEmails = async () => {
+    setIsSyncing(true);
+    setSyncStatus(null);
+    try {
+      const response = await fetch(apiUrl('/api/gmail-api/sync'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.processed > 0) {
+          setSyncStatus(`Found ${result.processed} new email(s)!`);
+          // Call the callback to refresh case data and navigate
+          if (onSyncComplete) {
+            onSyncComplete();
+          }
+        } else {
+          setSyncStatus('No new replies found. Check back later!');
+        }
+      } else {
+        const error = await response.json();
+        setSyncStatus(`Sync failed: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error syncing emails:', error);
+      setSyncStatus('Sync failed. Please try again.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleSubmitReply = async () => {
     if (!pastedReply.trim()) {
@@ -53,6 +89,7 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard, onRe
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,7 +141,40 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard, onRe
           </div>
         </Card>
 
-        {/* Paste Reply Section */}
+        {/* Sync Emails Section - Primary Action */}
+        <Card className="p-6 mb-6 border-2 border-green-300 bg-green-50">
+          <div className="flex items-center gap-2 mb-4">
+            <RefreshCw className="w-5 h-5 text-green-600" />
+            <h3 className="text-gray-900 font-semibold">Check for Replies</h3>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Click below to automatically check your email for any replies from {insurerName}.
+          </p>
+          <Button
+            onClick={handleSyncEmails}
+            disabled={isSyncing}
+            className="w-full bg-green-600 hover:bg-green-700"
+          >
+            {isSyncing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Checking for replies...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Sync Emails
+              </>
+            )}
+          </Button>
+          {syncStatus && (
+            <p className={`mt-3 text-sm ${syncStatus.includes('Found') ? 'text-green-700' : 'text-gray-600'}`}>
+              {syncStatus}
+            </p>
+          )}
+        </Card>
+
+        {/* Paste Reply Section - Alternative */}
         <Card className="p-6 mb-6 border-2 border-dashed border-blue-300 bg-blue-50">
           <div className="flex items-center gap-2 mb-4">
             <ClipboardPaste className="w-5 h-5 text-blue-600" />

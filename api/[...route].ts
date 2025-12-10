@@ -25,6 +25,9 @@ console.log("✅ Step 2e: inboundRoutes imported (Resend Inbound)");
 import fileRoutes from "../src/server/routes/fileRoutes";
 console.log("✅ Step 2f: fileRoutes imported");
 
+import gmailRoutes from "../src/server/routes/gmailRoutes";
+console.log("✅ Step 2g: gmailRoutes imported (Gmail API for sync)");
+
 const app = new Hono().basePath("/api");
 
 app.use("/*", cors({
@@ -53,7 +56,8 @@ app.use("*", async (c, next) => {
 app.route("/users", userRoutes);
 app.route("/plans", planRoutes);
 app.route("/cases", caseRoutes);
-app.route("/gmail", emailRoutes); // Using Resend, kept /gmail path for frontend compatibility
+app.route("/gmail", emailRoutes); // Using Resend for sending, kept /gmail path for frontend compatibility
+app.route("/gmail-api", gmailRoutes); // Gmail API for sync operations (auth, sync)
 app.route("/email", inboundRoutes); // Resend Inbound webhook at /api/email/inbound
 app.route("/files", fileRoutes); // File signed URL endpoint
 
