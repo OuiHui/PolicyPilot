@@ -99,11 +99,13 @@ async def analyze_case(request: dict):
 
         Return a JSON object with:
         - "analysis": A plain text explanation in layman's terms. NO markdown formatting at all.
-        - "terms": A list of COMPLEX insurance-specific jargon that needs definition. Focus on technical terms like:
-          * "prior authorization", "formulary exception", "tiering exception", "out-of-network", "deductible", 
-          * "coinsurance", "copay", "medical necessity", "step therapy", "quantity limits", "specialty pharmacy"
-          * Do NOT include common words like "appeal", "coverage", "decision", "review", "request"
-          * Format: list of {{ "term": "string", "definition": "string" }}
+        - "terms": A list of 3-5 insurance jargon terms that appear EXACTLY in the text above and need definitions.
+          CRITICAL RULES FOR TERMS:
+          * Each term MUST be an EXACT phrase that appears word-for-word in the context text above
+          * DO NOT return abbreviations or partial words (e.g., don't return "PPO" if it only appears as part of "supporting")
+          * MUST find and include compound terms like: "out-of-network", "medically necessary", "prior authorization", "emergency care", "covered benefit", "network provider", "Medicare benefit", "emergency stabilization"
+          * Include at least 3 terms that a regular person might not understand
+          * Format: list of {{ "term": "exact phrase from text", "definition": "simple explanation" }}
         """
         
         response = model.generate_content(prompt)
