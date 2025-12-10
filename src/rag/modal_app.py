@@ -83,7 +83,7 @@ async def analyze_case(request: dict):
         context_text = "\n\n".join(relevant_context)
         
         # Generate analysis with Gemini
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         You are an expert health insurance denial appeal lawyer. Analyze the following insurance denial documents and provide a COMPREHENSIVE analysis to help the patient appeal.
 
@@ -265,7 +265,7 @@ async def extract_denial(request: dict):
         context_text = "\n\n".join([doc.page_content for doc in results])
         
         # Generate brief description
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Create a brief 1-sentence description (under 15 words) of why this claim was denied.
         
@@ -339,7 +339,7 @@ async def generate_email(request: dict):
         context_text = "\n\n".join(relevant_context)
         
         # Generate email with Gemini
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Draft body paragraphs for a professional insurance appeal email.
         You are a Health Insurance Denial Lawyer writing on behalf of a client.
@@ -401,7 +401,7 @@ async def generate_followup(request: dict):
             for e in email_thread
         ])
         
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Write a professional follow-up email responding to the latest message.
         
@@ -491,7 +491,7 @@ async def extract_plan(request: dict):
         context_text = "\n\n".join([doc.page_content for doc in results])
         
         # Generate extraction with Gemini
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Extract the following insurance plan details from the context:
         1. Insurance Company Name
