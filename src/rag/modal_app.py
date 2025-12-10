@@ -116,13 +116,15 @@ async def analyze_case(request: dict):
         4. NEXT STEPS: List the immediate actions the patient should take.
 
         Return a JSON object with:
-        - "analysis": The comprehensive analysis described above. Must be at least 300 words. NO markdown formatting.
-        - "terms": A list of 3-5 insurance jargon terms that appear EXACTLY in the text above and need definitions.
+        - "analysis": The comprehensive analysis described above. Be as thorough as needed - no word limit. NO markdown formatting.
+        - "terms": A list of GENUINELY CONFUSING insurance/legal jargon terms that you use in your analysis and that need definitions.
           CRITICAL RULES FOR TERMS:
-          * Each term MUST be an EXACT phrase that appears word-for-word in the context text above
-          * DO NOT return abbreviations or partial words
-          * Include compound terms like: "out-of-network", "medically necessary", "prior authorization", "emergency care", "covered benefit"
-          * Format: list of {{ "term": "exact phrase from text", "definition": "simple explanation" }}
+          * ONLY include terms that a regular person would genuinely NOT understand
+          * Each term MUST be an EXACT phrase that appears in YOUR ANALYSIS TEXT above
+          * Focus on technical insurance jargon like: "prudent layperson standard", "Evidence of Coverage", "emergency stabilization", "Level 1 Appeal", "cost-sharing", "coinsurance"
+          * DO NOT include common words people already understand like: "appeal", "denial", "coverage", "emergency", "in-network", "out-of-network"
+          * Quality over quantity - only include terms that truly need explanation
+          * Format: list of {{ "term": "exact phrase from your analysis", "definition": "simple explanation in plain English" }}
         """
         
         response = model.generate_content(prompt)
