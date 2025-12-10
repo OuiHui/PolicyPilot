@@ -51,7 +51,28 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
           throw new Error('Failed to analyze case');
         }
 
-        const data = await response.json();
+        let data = await response.json();
+
+        // Handle case where analysis might be a stringified JSON object
+        if (data.analysis && typeof data.analysis === 'string') {
+          // Check if the analysis string is actually a JSON object
+          const trimmed = data.analysis.trim();
+          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              // If successfully parsed, use the inner analysis
+              if (parsed.analysis) {
+                data = {
+                  analysis: parsed.analysis,
+                  terms: parsed.terms || data.terms || []
+                };
+              }
+            } catch {
+              // Not valid JSON, keep as string
+            }
+          }
+        }
+
         setAnalysisResult(data);
       } catch (err) {
         console.error("Error analyzing case:", err);
