@@ -129,7 +129,7 @@ async def analyze_case(request: dict):
         text = response.text.strip()
         
         # Remove markdown code fences
-        text = text.replace('```json', '').replace('```', '')
+        text = text.replace('```json', '').replace('```', '').strip()
         
         # Parse JSON from response
         start_idx = text.find('{')
@@ -137,24 +137,33 @@ async def analyze_case(request: dict):
         if start_idx != -1 and end_idx != -1:
             json_str = text[start_idx:end_idx+1]
             
-            # Sanitize control characters that break JSON parsing
-            # Replace literal newlines in string values with \n escape
-            import re
-            # This regex finds string values and escapes newlines within them
-            def escape_newlines_in_strings(s):
-                # Replace actual newlines/tabs with escaped versions
-                s = s.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
-                s = s.replace('\t', '\\t')
-                return s
-            
             try:
                 return json.loads(json_str)
-            except json.JSONDecodeError:
-                # Try with sanitized control characters
-                sanitized = escape_newlines_in_strings(json_str)
-                return json.loads(sanitized)
+            except json.JSONDecodeError as e:
+                # Try to fix common JSON issues
+                import re
+                
+                # Replace unescaped newlines inside string values
+                # This regex-based approach is more targeted
+                def fix_json_string(s):
+                    # Replace literal newlines with escaped versions
+                    s = s.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
+                    s = s.replace('\t', '\\t')
+                    return s
+                
+                try:
+                    sanitized = fix_json_string(json_str)
+                    return json.loads(sanitized)
+                except json.JSONDecodeError:
+                    # Last resort: return the raw text as analysis
+                    return {
+                        "analysis": text,
+                        "terms": [],
+                        "parsing_note": "Response was returned as raw text due to JSON formatting issues"
+                    }
         
-        return {"error": "Failed to parse response", "raw": text}
+        # If no JSON found, return raw text
+        return {"analysis": text, "terms": []}
         
     except Exception as e:
         return {"error": str(e)}
