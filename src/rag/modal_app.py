@@ -155,6 +155,18 @@ async def analyze_case(request: dict):
                     sanitized = fix_json_string(json_str)
                     return json.loads(sanitized)
                 except json.JSONDecodeError:
+                    # Try to extract just the analysis text using regex
+                    import re
+                    analysis_match = re.search(r'"analysis"\s*:\s*"(.*?)"(?=\s*,\s*"terms"|\s*})', text, re.DOTALL)
+                    if analysis_match:
+                        analysis_text = analysis_match.group(1)
+                        # Unescape the content
+                        analysis_text = analysis_text.replace('\\n', '\n').replace('\\"', '"')
+                        return {
+                            "analysis": analysis_text,
+                            "terms": [],
+                            "parsing_note": "Extracted via regex due to JSON issues"
+                        }
                     # Last resort: return the raw text as analysis
                     return {
                         "analysis": text,
