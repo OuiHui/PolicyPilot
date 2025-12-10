@@ -52,27 +52,42 @@ export function AppealStrategy({ caseId, userId, parsedData, onDraftEmail, onBac
         }
 
         let data = await response.json();
+        console.log('Raw analysis response:', data);
 
-        // Handle case where analysis might be a stringified JSON object
+        // Handle multiple cases of JSON stringification
+        // Case 1: The entire response might be a string that needs parsing
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch {
+            // Not valid JSON, wrap it
+            data = { analysis: data, terms: [] };
+          }
+        }
+
+        // Case 2: The analysis field might be a stringified JSON object
         if (data.analysis && typeof data.analysis === 'string') {
-          // Check if the analysis string is actually a JSON object
           const trimmed = data.analysis.trim();
+          // Check if it looks like a JSON object
           if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
             try {
               const parsed = JSON.parse(trimmed);
-              // If successfully parsed, use the inner analysis
+              // If successfully parsed and has analysis field, use it
               if (parsed.analysis) {
+                console.log('Parsed nested JSON in analysis field');
                 data = {
                   analysis: parsed.analysis,
                   terms: parsed.terms || data.terms || []
                 };
               }
-            } catch {
+            } catch (e) {
+              console.log('Could not parse analysis as JSON:', e);
               // Not valid JSON, keep as string
             }
           }
         }
 
+        console.log('Final processed data:', data);
         setAnalysisResult(data);
       } catch (err) {
         console.error("Error analyzing case:", err);
