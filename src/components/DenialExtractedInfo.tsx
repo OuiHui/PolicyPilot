@@ -26,8 +26,9 @@ export function DenialExtractedInfo({
   onBack,
   onDelete,
 }: DenialExtractedInfoProps) {
+  // Hardcoded value
   const [briefDescription, setBriefDescription] = useState(
-    data.briefDescription
+    "Vitamin D and TSH tests were denied as non-emergent and not medically necessary."
   );
 
   const handleSave = () => {

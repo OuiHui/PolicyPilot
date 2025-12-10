@@ -1,0 +1,1 @@
+{"_id":{"$oid":"692ab49b335ba5d104d52809"},"email":"mchen692@gatech.edu","password":"123","firstName":"New","lastName":"User","hipaaAccepted":true,"termsAccepted":true,"createdAt":"2025-11-29T08:53:47.245Z","__v":{"$numberInt":"0"}}

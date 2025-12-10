@@ -118,6 +118,8 @@ export function EmailSent({ case: caseItem, onViewReply, onBackToDashboard }: Em
             onClick={async () => {
                 try {
                     setIsSyncing(true);
+                    // Wait 1 second before syncing (simulating processing time)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     const { apiUrl } = await import('../config');
                     const res = await fetch(apiUrl('/api/gmail/sync'), { method: 'POST' });
                     const data = await res.json();

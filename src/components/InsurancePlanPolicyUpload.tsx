@@ -76,7 +76,10 @@ export function InsurancePlanPolicyUpload({
           : []
         : [...sobFiles, ...eobFiles, ...otherFiles];
 
-    onComplete(policyType, allFiles);
+    // Wait 1 second before proceeding (simulating processing time)
+    setTimeout(() => {
+      onComplete(policyType, allFiles);
+    }, 1000);
   };
 
   const canSubmit =

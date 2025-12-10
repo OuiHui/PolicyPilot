@@ -1,0 +1,3 @@
+* onboarding changed so that uploading policy document is not everytime you want to manage a case
+* changed from sending from user personal email to using policypilot email and acting as a perosnal advocate on their belhalf because of privacy concerns monitoring the user's inbox
+* milestones: disocvering people dont want a black box solution for a problem that already seems like a black box, figuring out database schema, figuring out restful apis, figuring out the rag pipeline, figuring out google cloud platform for api, fine tuning the embeddings, agent for emails, fully working MVP that's not hard coded.

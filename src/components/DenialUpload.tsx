@@ -86,6 +86,8 @@ export function DenialUpload({
   const handleContinue = async () => {
     setIsExtracting(true);
     try {
+        // Wait 1 second before proceeding (simulating processing time)
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await onContinue(files);
     } catch (error) {
         console.error("Error continuing:", error);

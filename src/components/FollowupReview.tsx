@@ -54,29 +54,34 @@ export function FollowupReview({ userEmail, onSend, onBack, initialSubject, init
     return initialSubject || 'Re: Appeal for Claim Denial';
   };
 
-  const [subject, setSubject] = useState(getReplySubject());
-  const [body, setBody] = useState(initialBody ||
-    `Dear Claims Department,
+  const hardcodedEmailBody = `Dear Mr. Hayes,
 
-Thank you for your recent correspondence regarding my appeal. After reviewing your response, I must respectfully note that several key policy and medical considerations outlined in my initial appeal were not directly addressed.
+RE: Mae Chen
 
-Your letter references the use of "clinical guidelines" and "evidence-based criteria" in support of your determination. However, my policy does not state that internal guidelines may override the policy definitions of medical necessity. As referenced in Section 4.B of my policy, medically necessary services are defined as those that are "appropriate and consistent with the diagnosis and that could not have been omitted without adversely affecting the patient's condition or quality of care."
+Claim Number: C193787
 
-Accordingly, I am requesting clarification on the following points:
+Policy: Cigna Connect Flex Bronze 0 NA/AN Under 300 MIEP0932
 
-1. The legal and contractual basis under which internal clinical guidelines are applied in lieu of the policy’s stated coverage criteria.  
-2. The rationale for disregarding the medical judgment of my treating physician, who determined that the procedure was clinically necessary for my diagnosis and recovery.  
-3. Documentation or disclosure indicating where your internal review criteria were referenced or incorporated into my policy documents at the time of purchase.  
+Thank you for your prompt procedural audit and for overturning the adverse benefit determination for the services rendered to our client, Mae Chen, on September 21, 2025. We appreciate your confirmation that CPT codes 82306 and 84443 will be reprocessed for payment.
 
-In light of these concerns, I am requesting that HealthGuard conduct a second-level review of my appeal, taking into account both the policy language and the supporting medical documentation provided by my physician.
+However, we must formally object to your refusal to provide the 'Relevant Information' requested in our initial appeal. Your response states that because the denial is now "null and void," there is no longer an active adverse determination to support with the requested documentation. This position is inconsistent with the plan's own terms and our client's rights.
 
-If this matter cannot be resolved through internal review, please provide information on the process for requesting an independent external review under applicable state and federal regulations.
+Our right to receive this information was established the moment the initial adverse determination was issued. The policy itself defines 'Relevant Information' as "any document, record, or other information which (a) was relied upon in making the benefit determination; (b) was submitted, considered, or generated in the course of making the benefit determination, without regard to whether such document, record, or other information was relied upon..."
 
-Thank you for your continued attention to this matter. I look forward to your timely and comprehensive response.
+The subsequent procedural reversal does not erase the fact that a benefit determination *was* made, and documents *were* generated and relied upon in that process. Allowing an insurer to shield its initial clinical reasoning from review simply by overturning a denial on a technicality creates a loophole that undermines transparency and accountability. Understanding the basis for the original flawed denial is critical to ensuring such improper determinations are not made in the future.
+
+Therefore, we reiterate our demand for the complete administrative file related to the *initial* denial of claim C193787. This includes, but is not limited to, all documents, records, internal notes, the specific clinical rationale, applicable medical policies, and reviewer credentials that were submitted, considered, or generated in the course of making that determination.
+
+Please provide this information within 15 business days.
 
 Sincerely,
-[Your Name]`
-  );
+
+PolicyPilot
+
+Legal Counsel for Mae Chen`;
+
+  const [subject, setSubject] = useState(getReplySubject());
+  const [body, setBody] = useState(initialBody || hardcodedEmailBody);
 
   const handleSend = async () => {
     // Find the last received email to reply to

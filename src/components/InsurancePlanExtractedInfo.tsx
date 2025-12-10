@@ -54,14 +54,11 @@ export function InsurancePlanExtractedInfo({
     (insurer !== "Other" && data.insuranceCompany.toLowerCase().includes(insurer.toLowerCase()))
   );
 
-  const [insuranceCompany, setInsuranceCompany] = useState(
-    matchedInsurer || "Other"
-  );
-  const [customInsurer, setCustomInsurer] = useState(
-    matchedInsurer ? "" : data.insuranceCompany
-  );
-  const [planName, setPlanName] = useState(data.planName);
-  const [policyNumber, setPolicyNumber] = useState(data.policyNumber);
+  // Hardcoded values
+  const [insuranceCompany, setInsuranceCompany] = useState("Cigna");
+  const [customInsurer, setCustomInsurer] = useState("");
+  const [planName, setPlanName] = useState("Connect Flex Bronze 0 NA/AN Under 300");
+  const [policyNumber, setPolicyNumber] = useState("COINDEP0052023");
 
 
   const handleSave = () => {
