@@ -109,11 +109,31 @@ async def analyze_case(request: dict):
         response = model.generate_content(prompt)
         text = response.text.strip()
         
+        # Remove markdown code fences
+        text = text.replace('```json', '').replace('```', '')
+        
         # Parse JSON from response
         start_idx = text.find('{')
         end_idx = text.rfind('}')
         if start_idx != -1 and end_idx != -1:
-            return json.loads(text[start_idx:end_idx+1])
+            json_str = text[start_idx:end_idx+1]
+            
+            # Sanitize control characters that break JSON parsing
+            # Replace literal newlines in string values with \n escape
+            import re
+            # This regex finds string values and escapes newlines within them
+            def escape_newlines_in_strings(s):
+                # Replace actual newlines/tabs with escaped versions
+                s = s.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
+                s = s.replace('\t', '\\t')
+                return s
+            
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                # Try with sanitized control characters
+                sanitized = escape_newlines_in_strings(json_str)
+                return json.loads(sanitized)
         
         return {"error": "Failed to parse response", "raw": text}
         
