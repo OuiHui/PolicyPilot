@@ -85,16 +85,25 @@ async def analyze_case(request: dict):
         # Generate analysis with Gemini
         model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
-        You are an expert health insurance lawyer. Analyze the following context.
-        
+        You are an expert health insurance lawyer. Analyze the following context and explain it in simple, plain text.
+
+        IMPORTANT FORMATTING RULES:
+        1. Write in PLAIN TEXT only - NO markdown, NO asterisks, NO bullet points with * or -, NO bold formatting
+        2. Use simple paragraphs and numbered lists (1. 2. 3.) when needed
+        3. Keep the explanation concise and easy to understand
+
         Context:
         ---
         {context_text}
         ---
-        
+
         Return a JSON object with:
-        - "analysis": explanation in layman's terms
-        - "terms": list of {{ "term": "string", "definition": "string" }}
+        - "analysis": A plain text explanation in layman's terms. NO markdown formatting at all.
+        - "terms": A list of COMPLEX insurance-specific jargon that needs definition. Focus on technical terms like:
+          * "prior authorization", "formulary exception", "tiering exception", "out-of-network", "deductible", 
+          * "coinsurance", "copay", "medical necessity", "step therapy", "quantity limits", "specialty pharmacy"
+          * Do NOT include common words like "appeal", "coverage", "decision", "review", "request"
+          * Format: list of {{ "term": "string", "definition": "string" }}
         """
         
         response = model.generate_content(prompt)
