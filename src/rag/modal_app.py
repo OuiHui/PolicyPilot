@@ -85,26 +85,43 @@ async def analyze_case(request: dict):
         # Generate analysis with Gemini
         model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
-        You are an expert health insurance lawyer. Analyze the following context and explain it in simple, plain text.
+        You are an expert health insurance denial appeal lawyer. Analyze the following insurance denial documents and provide a COMPREHENSIVE analysis to help the patient appeal.
 
         IMPORTANT FORMATTING RULES:
         1. Write in PLAIN TEXT only - NO markdown, NO asterisks, NO bullet points with * or -, NO bold formatting
         2. Use simple paragraphs and numbered lists (1. 2. 3.) when needed
-        3. Keep the explanation concise and easy to understand
+        3. Be thorough and detailed - this analysis should be at least 3-4 paragraphs
 
-        Context:
+        Context from denial documents:
         ---
         {context_text}
         ---
 
+        Your analysis MUST include ALL of the following sections:
+
+        1. DENIAL SUMMARY: Briefly explain what was denied and why the insurance company claims they denied it.
+
+        2. WEAKNESSES TO EXPLOIT: Identify 2-3 specific weaknesses in the insurance company's denial reasoning that can be challenged. Look for:
+           - Vague or unsupported claims about "medical necessity"
+           - Failure to consider all medical evidence
+           - Misinterpretation of policy terms
+           - Procedural errors in their review process
+           - Contradictions with their own policy language
+
+        3. APPEAL STRATEGY: Provide specific steps and arguments the patient should use in their appeal, including:
+           - What evidence to gather (doctor's letters, medical records, etc.)
+           - Key arguments to make
+           - Policy provisions that support coverage
+
+        4. NEXT STEPS: List the immediate actions the patient should take.
+
         Return a JSON object with:
-        - "analysis": A plain text explanation in layman's terms. NO markdown formatting at all.
+        - "analysis": The comprehensive analysis described above. Must be at least 300 words. NO markdown formatting.
         - "terms": A list of 3-5 insurance jargon terms that appear EXACTLY in the text above and need definitions.
           CRITICAL RULES FOR TERMS:
           * Each term MUST be an EXACT phrase that appears word-for-word in the context text above
-          * DO NOT return abbreviations or partial words (e.g., don't return "PPO" if it only appears as part of "supporting")
-          * MUST find and include compound terms like: "out-of-network", "medically necessary", "prior authorization", "emergency care", "covered benefit", "network provider", "Medicare benefit", "emergency stabilization"
-          * Include at least 3 terms that a regular person might not understand
+          * DO NOT return abbreviations or partial words
+          * Include compound terms like: "out-of-network", "medically necessary", "prior authorization", "emergency care", "covered benefit"
           * Format: list of {{ "term": "exact phrase from text", "definition": "simple explanation" }}
         """
         
