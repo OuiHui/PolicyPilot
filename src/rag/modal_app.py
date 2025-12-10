@@ -300,9 +300,13 @@ async def generate_email(request: dict):
         model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
         Draft body paragraphs for a professional insurance appeal email.
-        You are a Health Insurance Denial Lawyer.
+        You are a Health Insurance Denial Lawyer writing on behalf of a client.
         
-        Context:
+        IMPORTANT: Write complete, ready-to-send content. Do NOT use any placeholder brackets like [Client Name], [Date], [Policy Number], etc.
+        Write the email in first person as if you are the patient/policyholder appealing their denial.
+        Use generic but professional phrasing where specific details would normally go.
+        
+        Context from the case documents:
         ---
         {context_text}
         ---
