@@ -16,7 +16,7 @@ from pathlib import Path
 # Define the Modal app
 app = modal.App("policypilot-rag")
 
-# Define the container image with all dependencies
+# Define the container image with all dependencies and include pipeline.py
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install([
@@ -32,6 +32,10 @@ image = (
         "pypdf",
         "sentence-transformers",
     ])
+    .add_local_file(
+        Path(__file__).parent / "pipeline.py",
+        remote_path="/root/pipeline.py"
+    )
 )
 
 @app.function(
@@ -121,7 +125,13 @@ async def extract_denial(request: dict):
     POST body: { "caseId": "string" }
     Returns: { "briefDescription": "string" }
     """
-    from pipeline import get_db_connection, get_supabase_client
+    import traceback
+    
+    try:
+        from pipeline import get_db_connection, get_supabase_client
+    except Exception as e:
+        return {"error": f"Failed to import pipeline: {str(e)}", "traceback": traceback.format_exc()}
+    
     from langchain_community.document_loaders import PyPDFLoader
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_huggingface import HuggingFaceEmbeddings
@@ -139,7 +149,7 @@ async def extract_denial(request: dict):
         case = db.cases.find_one({"id": case_id})
         
         if not case:
-            return {"error": "Case not found"}
+            return {"error": f"Case not found: {case_id}"}
         
         if not case.get("denialFiles"):
             return {"error": "No denial files found"}
@@ -209,7 +219,7 @@ async def extract_denial(request: dict):
         return result
         
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 
 @app.function(
