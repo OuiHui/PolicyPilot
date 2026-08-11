@@ -1116,12 +1116,6 @@ export default function App() {
         />;
       case 'reply-received':
         if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
-
-
-      // ... inside renderScreen ...
-
-      case 'reply-received':
-        if (!currentCase) return <Dashboard onStartNewAppeal={handleStartNewAppeal} cases={cases} insurancePlans={insurancePlans} onViewCase={handleViewCase} onResumeCase={handleResumeCase} onDeleteCase={handleDeleteCase} />;
         return <ReplyReceived
           case={currentCase}
           onBack={() => setCurrentScreen('dashboard')}
