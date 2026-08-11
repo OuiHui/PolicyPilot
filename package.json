@@ -66,10 +66,13 @@
             "tsx": "^4.20.6",
             "vite": "6.3.5"
       },
+      "homepage": "https://maechen.github.io/PolicyPilot",
       "scripts": {
             "dev": "concurrently \"npm run dev:client\" \"npm run server\"",
             "dev:client": "vite",
             "build": "vite build",
+            "predeploy": "npm run build",
+            "deploy": "gh-pages -d build",
             "server": "tsx watch src/server/index.tsx"
       }
 }
