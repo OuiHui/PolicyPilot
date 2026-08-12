@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"gh-pages\" ] || [ ! -f package.json ]; then exit 0; else exit 1; fi",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "devCommand": "npm run dev",
